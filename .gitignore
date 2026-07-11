@@ -1,0 +1,22 @@
+# HAR Files (Prepaid Meter API Captures)
+*.har
+har/
+
+# OS/IDE temporary files
+.DS_Store
+.idea/
+.vscode/
+
+# Android patterns
+android/.gradle/
+android/.kotlin/
+android/build/
+android/local.properties
+android/app/build/
+android/*.iml
+
+# React/Extension patterns
+extension-react/node_modules/
+extension-react/dist/
+extension-react/dist-ssr/
+extension-react/*.log
