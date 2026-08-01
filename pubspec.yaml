@@ -1,0 +1,48 @@
+name: boner_mohis
+description: "Boner Mohis — Prepaid electricity balance tracker for Bangladesh."
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Local SQLite database
+  sqflite: ^2.3.3
+  path: ^1.9.0
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Background tasks & notifications
+  workmanager: ^0.9.0+3
+  flutter_local_notifications: ^17.2.2
+
+  # HTTP for DESCO API
+  http: ^1.2.2
+
+  # UUID generation
+  uuid: ^4.4.2
+
+  # Google Fonts (Space Grotesk, DM Sans, DM Mono)
+  google_fonts: ^6.2.1
+
+  # Charts for usage history
+  fl_chart: ^0.69.0
+
+  # Date/number formatting
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

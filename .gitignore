@@ -1,11 +1,28 @@
+# Flutter / Dart patterns
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+*.iml
+
 # HAR Files (Prepaid Meter API Captures)
 *.har
 har/
 
-# OS/IDE temporary files
+# OS / IDE temporary files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 .idea/
 .vscode/
+*.swp
+*.swo
 
 # Android patterns
 android/.gradle/
@@ -14,9 +31,20 @@ android/build/
 android/local.properties
 android/app/build/
 android/*.iml
+android_native_backup/
 
-# React/Extension patterns
+# React / Node / Extension patterns
+node_modules/
 extension-react/node_modules/
 extension-react/dist/
 extension-react/dist-ssr/
 extension-react/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment / secret files
+.env
+.env.local
+.env.*.local
+
