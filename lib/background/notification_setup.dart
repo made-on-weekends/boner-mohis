@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart';
+import '../data/desco_http_client.dart';
 
 const _channelId = 'boner_mohis_low_balance';
 const _channelName = 'Low Balance Alerts';
@@ -16,7 +19,7 @@ const double kLowBalanceThresholdDays = 2.0;
 final _notifications = FlutterLocalNotificationsPlugin();
 bool _notificationsInitialized = false;
 
-/// Initialise the notifications plugin and schedule the daily background check.
+/// Initialise the notifications plugin and schedule the 12-hourly background check.
 /// Wrapped in try/catch so a WorkManager registration failure never crashes startup.
 Future<void> setupNotifications() async {
   try {
@@ -29,9 +32,9 @@ Future<void> setupNotifications() async {
     await Workmanager().registerPeriodicTask(
       _taskName,
       _taskName,
-      frequency: const Duration(hours: 6),
-      constraints: Constraints(networkType: NetworkType.notRequired),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      frequency: const Duration(hours: 12),
+      constraints: Constraints(networkType: NetworkType.connected),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
   } catch (_) {
     // WorkManager not available (e.g. emulator/desktop) — skip silently.
@@ -136,10 +139,59 @@ Future<void> _runBalanceCheck() async {
 
     final rows = await db.query('accounts');
     for (final row in rows) {
-      final balance = (row['balance'] as num).toDouble();
-      final yesterdayUsage = (row['yesterday_usage'] as num).toDouble();
       final id = row['id'] as int;
       final nickname = row['nickname'] as String;
+      final distributor = row['distributor'] as String;
+      final accountNo = row['account_no'] as String;
+      final meterNo = row['meter_no'] as String;
+
+      double balance = (row['balance'] as num).toDouble();
+      double yesterdayUsage = (row['yesterday_usage'] as num).toDouble();
+
+      // Attempt live API balance check for DESCO accounts in background
+      if (distributor == 'desco' && accountNo.isNotEmpty && meterNo.isNotEmpty) {
+        try {
+          http.Client client;
+          try {
+            client = await createDescoHttpClient();
+          } catch (_) {
+            client = http.Client();
+          }
+
+          try {
+            final balanceUri = Uri.parse(
+              'https://prepaid.desco.org.bd/api/tkdes/customer/getBalance'
+              '?accountNo=$accountNo&meterNo=$meterNo',
+            );
+            final res = await client
+                .get(balanceUri)
+                .timeout(const Duration(seconds: 10));
+            if (res.statusCode == 200) {
+              final obj = jsonDecode(res.body) as Map<String, dynamic>;
+              if ((obj['code'] as int?) == 200 && obj['data'] is Map) {
+                final data = obj['data'] as Map<String, dynamic>;
+                if (data['balance'] is num) {
+                  balance = (data['balance'] as num).toDouble();
+                  final now = DateTime.now().millisecondsSinceEpoch;
+                  await db.update(
+                    'accounts',
+                    {
+                      'balance': balance,
+                      'last_updated': now,
+                    },
+                    where: 'id = ?',
+                    whereArgs: [id],
+                  );
+                }
+              }
+            }
+          } finally {
+            client.close();
+          }
+        } catch (_) {
+          // If background network fetch fails, fallback to local stored balance
+        }
+      }
 
       if (yesterdayUsage <= 0) continue;
       final days = balance / yesterdayUsage;
@@ -166,3 +218,4 @@ Future<Database?> _openDb() async {
     return null;
   }
 }
+
