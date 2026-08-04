@@ -47,7 +47,7 @@ class AccountDao {
   }) {
     late StreamController<List<Account>> controller;
     Timer? timer;
-    String lastSig = '';
+    String? lastSig;
 
     Future<void> check() async {
       try {
@@ -58,7 +58,9 @@ class AccountDao {
           lastSig = sig;
           if (!controller.isClosed) controller.add(current);
         }
-      } catch (_) {}
+      } catch (e, st) {
+        if (!controller.isClosed) controller.addError(e, st);
+      }
     }
 
     controller = StreamController<List<Account>>(

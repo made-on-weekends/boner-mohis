@@ -210,6 +210,7 @@ export const providers = {
       }
 
       const liveBalance = Number(balJson.data.balance);
+      const realMeterNo = balJson.data.meterNo || account.meterNo;
       // NOTE: balJson.data.currentMonthConsumption is BDT cost, NOT kWh.
       // The actual kWh reading comes from consumedUnit in the daily consumption endpoint.
       // We initialise to 0 here and derive it below from consumedUnit.
@@ -222,7 +223,7 @@ export const providers = {
       const dateFrom = fifteenDaysAgo.toISOString().split('T')[0];
 
       const consResult = await extensionFetch(
-        `https://prepaid.desco.org.bd/api/tkdes/customer/getCustomerDailyConsumption?accountNo=${account.accountNo}&meterNo=${account.meterNo}&dateFrom=${dateFrom}&dateTo=${dateTo}`
+        `https://prepaid.desco.org.bd/api/tkdes/customer/getCustomerDailyConsumption?accountNo=${account.accountNo}&meterNo=${realMeterNo}&dateFrom=${dateFrom}&dateTo=${dateTo}`
       );
       let yesterdayCost = account.yesterdayUsage || 0;
       

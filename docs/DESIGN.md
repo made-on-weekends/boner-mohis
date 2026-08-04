@@ -140,3 +140,16 @@ Implemented via CSS system preference media queries (`@media (prefers-color-sche
 - `--text-primary`: `#F0ECE3`
 - `--text-secondary`: `#B2AEA2`
 - `--text-muted`: `#8E897D`
+
+### State text variants (dark mode)
+
+`success`/`warning`/`danger`/`accent` are tuned for light backgrounds and drop below the 4.5:1 WCAG AA minimum when used as text, icon fill, or chart marks directly on `--card-bg`/`--bg-color` in dark mode. Use these lightened variants for **text, icons, chart lines/dots, and legend swatches** on dark surfaces; keep the base tones for borders and alpha-tinted backgrounds, which stay legible as-is.
+
+| Token | Light (base) | Dark (text variant) | Usage |
+|---|---|---|---|
+| `--state-ok-text` | `#2E7D3A` | `#6FCB7F` | Success/good-balance text, chart kWh line & dots, legend |
+| `--state-low-text` | `#B25409` | `#E8954D` | Warning/low-balance text |
+| `--state-critical-text` | `#C22A21` | `#E8746A` | Danger/critical text, delete icon, error banners |
+| `--accent-text` | `#B25409` | `#E8954D` | Ember accent used as text (forecast values, chart cost line) |
+
+Flutter equivalents live in `FilamentColors.successText(isDark)`, `emberText(isDark)`, `dangerText(isDark)` (`lib/ui/theme/filament_theme.dart`).

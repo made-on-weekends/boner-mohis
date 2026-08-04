@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/account.dart';
 import '../../data/calculations_helper.dart';
 import '../theme/filament_theme.dart';
+import 'charge_bar.dart';
 
 class AccountCard extends StatelessWidget {
   final Account account;
@@ -18,6 +19,8 @@ class AccountCard extends StatelessWidget {
         daysRemaining != double.infinity && daysRemaining <= 2.0;
     final slabDetails = CalculationsHelper.getSlabDetails(account.monthlyKwh,
         provider: account.distributor);
+    final dist = CalculationsHelper.distributors[account.distributor] ??
+        CalculationsHelper.distributors['default']!;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor =
@@ -59,6 +62,7 @@ class AccountCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Header: nickname + provider badge + low badge ──────────
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -74,7 +78,7 @@ class AccountCard extends StatelessWidget {
                             )),
                         const SizedBox(height: 2),
                         Text(
-                          _distributorName(account.distributor),
+                          dist.name,
                           style: GoogleFonts.dmSans(
                               fontSize: 12, color: textMuted),
                         ),
@@ -89,35 +93,42 @@ class AccountCard extends StatelessWidget {
                         color: FilamentColors.danger.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: FilamentColors.danger.withValues(alpha: 0.3)),
+                            color:
+                                FilamentColors.danger.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.warning_amber_rounded,
-                              size: 12, color: FilamentColors.danger),
+                          Icon(Icons.warning_amber_rounded,
+                              size: 12,
+                              color: FilamentColors.dangerText(isDark)),
                           const SizedBox(width: 4),
-                          Text('LOW',
+                          Text('Low balance',
                               style: GoogleFonts.dmSans(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: FilamentColors.danger,
+                                color: FilamentColors.dangerText(isDark),
                               )),
                         ],
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 14),
+
+              // ── Balance ────────────────────────────────────────────────
               Row(
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('৳',
+                  Text(dist.currency,
                       style: GoogleFonts.dmMono(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
-                        color: FilamentColors.textSecondary,
+                        color: isDark
+                            ? FilamentColors.textSecondaryDark
+                            : FilamentColors.textSecondary,
                       )),
                   const SizedBox(width: 4),
                   Text(
@@ -126,41 +137,69 @@ class AccountCard extends StatelessWidget {
                       fontSize: 36,
                       fontWeight: FontWeight.w500,
                       color: isLowBalance
-                          ? FilamentColors.danger
+                          ? FilamentColors.dangerText(isDark)
                           : textPrimary,
                       height: 1.0,
                     ),
                   ),
                 ],
               ),
+
               const SizedBox(height: 12),
+
+              // ── ChargeBar ──────────────────────────────────────────────
+              ChargeBar(monthlyKwh: account.monthlyKwh),
+
+              const SizedBox(height: 12),
+
+              // ── 2×2 Stats Grid ─────────────────────────────────────────
               Row(
                 children: [
-                  _StatChip(
-                    label: 'Days Left',
-                    value: daysRemaining == double.infinity
-                        ? '--'
-                        : daysRemaining.toStringAsFixed(1),
-                    icon: Icons.schedule_outlined,
-                    color: isLowBalance
-                        ? FilamentColors.danger
-                        : FilamentColors.success,
+                  _StatCell(
+                    caption: 'Current tier',
+                    value: _tierShortLabel(slabDetails.label),
+                    valueColor: _slabColor(slabDetails.index, isDark),
                   ),
                   const SizedBox(width: 8),
-                  _StatChip(
-                    label: 'Slab',
-                    value: _slabShortLabel(slabDetails.label),
-                    icon: Icons.bolt_outlined,
-                    color: _slabColor(slabDetails.index),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatChip(
-                    label: 'Monthly',
-                    value: '${account.monthlyKwh.toStringAsFixed(1)} kWh',
-                    icon: Icons.electric_meter_outlined,
-                    color: FilamentColors.textSecondary,
+                  _StatCell(
+                    caption: 'Consumed this month',
+                    value: '${account.monthlyKwh.toStringAsFixed(0)} kWh',
+                    valueColor: textPrimary,
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _StatCell(
+                    caption: 'Yesterday bill',
+                    value: '${dist.currency}${account.yesterdayUsage.toStringAsFixed(2)}',
+                    valueColor: textPrimary,
+                  ),
+                  const SizedBox(width: 8),
+                  _StatCell(
+                    caption: 'Forecast remaining',
+                    value: daysRemaining == double.infinity
+                        ? '--'
+                        : '${daysRemaining.toStringAsFixed(1)} days',
+                    valueColor: isLowBalance
+                        ? FilamentColors.dangerText(isDark)
+                        : FilamentColors.successText(isDark),
+                    highlighted: true,
+                    isLow: isLowBalance,
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // ── Tap hint ───────────────────────────────────────────────
+              Center(
+                child: Text(
+                  'Tap to view details',
+                  style: GoogleFonts.dmSans(
+                      fontSize: 11, color: textMuted),
+                ),
               ),
             ],
           ),
@@ -169,46 +208,35 @@ class AccountCard extends StatelessWidget {
     );
   }
 
-  String _distributorName(String key) {
-    switch (key) {
-      case 'desco':
-        return 'DESCO (Dhaka Electric)';
-      case 'dpdc':
-        return 'DPDC (Dhaka Power)';
-      default:
-        return 'Standard Progressive';
-    }
+  Color _slabColor(int index, bool isDark) {
+    if (index <= 1) return FilamentColors.successText(isDark);
+    if (index <= 3) return FilamentColors.emberText(isDark);
+    return FilamentColors.dangerText(isDark);
   }
 
-  Color _slabColor(int index) {
-    if (index <= 1) return FilamentColors.success;
-    if (index <= 3) return FilamentColors.warning;
-    return FilamentColors.danger;
-  }
-
-  String _slabShortLabel(String label) {
-    if (label.startsWith('Lifeline')) return 'Lifeline';
-    if (label.startsWith('First')) return '1st Step';
-    if (label.startsWith('Second')) return '2nd Step';
-    if (label.startsWith('Third')) return '3rd Step';
-    if (label.startsWith('Fourth')) return '4th Step';
-    if (label.startsWith('Fifth')) return '5th Step';
-    if (label.startsWith('Sixth')) return '6th Step';
-    return label.split(' ').first;
+  /// Extracts the slab name before the parenthetical range, e.g.
+  /// "First Step (51-75 kWh)" → "First Step"
+  String _tierShortLabel(String label) {
+    final parenIdx = label.indexOf(' (');
+    return parenIdx >= 0 ? label.substring(0, parenIdx) : label;
   }
 }
 
-class _StatChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
+// ─── Reusable 2×2 stat cell ────────────────────────────────────────────────
 
-  const _StatChip({
-    required this.label,
+class _StatCell extends StatelessWidget {
+  final String caption;
+  final String value;
+  final Color valueColor;
+  final bool highlighted;
+  final bool isLow;
+
+  const _StatCell({
+    required this.caption,
     required this.value,
-    required this.icon,
-    required this.color,
+    required this.valueColor,
+    this.highlighted = false,
+    this.isLow = false,
   });
 
   @override
@@ -217,37 +245,45 @@ class _StatChip extends StatelessWidget {
     final borderColor =
         isDark ? FilamentColors.darkBorder : FilamentColors.borderLight;
 
+    Color? bgColor;
+    Color? highlightBorder;
+    if (highlighted) {
+      if (isLow) {
+        bgColor = FilamentColors.danger.withValues(alpha: 0.06);
+        highlightBorder = FilamentColors.danger.withValues(alpha: 0.2);
+      } else {
+        bgColor = FilamentColors.success.withValues(alpha: 0.06);
+        highlightBorder = FilamentColors.success.withValues(alpha: 0.2);
+      }
+    }
+
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          border: Border.all(color: borderColor),
+          color: bgColor,
+          border: Border.all(color: highlightBorder ?? borderColor),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label,
-                      style: GoogleFonts.dmSans(
-                          fontSize: 10,
-                          color: FilamentColors.textMuted,
-                          height: 1.2)),
-                  Text(value,
-                      style: GoogleFonts.dmMono(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: color,
-                          height: 1.3),
-                      overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
+            Text(caption,
+                style: GoogleFonts.dmSans(
+                    fontSize: 10,
+                    color: isDark
+                        ? FilamentColors.textMutedDark
+                        : FilamentColors.textMuted,
+                    height: 1.2)),
+            const SizedBox(height: 2),
+            Text(value,
+                style: GoogleFonts.dmMono(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor,
+                  height: 1.3,
+                ),
+                overflow: TextOverflow.ellipsis),
           ],
         ),
       ),

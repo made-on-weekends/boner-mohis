@@ -13,11 +13,17 @@
   --accent: #B25409;
   --accent-pressed: #8A4108;
   --accent-glow: #E88540;
+  --accent-text: #B25409;
 
   /* State Tiers */
   --state-ok: #2E7D3A;
   --state-low: #B25409; /* ember */
   --state-critical: #C22A21;
+
+  /* State Tiers — text/icon variants (same as base in light mode) */
+  --state-ok-text: #2E7D3A;
+  --state-low-text: #B25409;
+  --state-critical-text: #C22A21;
 
   /* Typography */
   --font-display: 'Space Grotesk', sans-serif;
@@ -37,6 +43,12 @@
     --text-primary: #F0ECE3;
     --text-secondary: #B2AEA2;
     --text-muted: #8E897D;
+
+    /* Lightened state variants — base hues fall below 4.5:1 on dark card/bg */
+    --state-ok-text: #6FCB7F;
+    --state-low-text: #E8954D;
+    --state-critical-text: #E8746A;
+    --accent-text: #E8954D;
   }
 }
 
@@ -166,7 +178,7 @@ body {
 /* Danger icon button variant */
 .btn-icon-danger:hover {
   border-color: var(--state-critical) !important;
-  color: var(--state-critical) !important;
+  color: var(--state-critical-text) !important;
 }
 
 /* Simulator card */
@@ -237,7 +249,7 @@ body {
 
 .sim-error-text {
   font-size: 12px;
-  color: var(--state-critical);
+  color: var(--state-critical-text);
   margin: 4px 0 0;
   flex: 1 0 100%;
 }
@@ -355,7 +367,7 @@ body {
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 500;
-  color: var(--state-low);
+  color: var(--state-low-text);
   border: 1px solid var(--state-low);
   border-radius: 4px;
   padding: 2px 8px;
@@ -1092,7 +1104,7 @@ button:active {
 
 .btn-delete:hover {
   background-color: var(--border-color);
-  color: var(--state-critical);
+  color: var(--state-critical-text);
 }
 
 .btn-sync.spinning svg,
@@ -1374,11 +1386,11 @@ select:focus {
 }
 
 .tooltip-dot.cyan {
-  background-color: var(--state-ok);
+  background-color: var(--state-ok-text);
 }
 
 .tooltip-dot.orange {
-  background-color: var(--accent);
+  background-color: var(--accent-text);
 }
 
 .tooltip-dot.gold {
@@ -1418,11 +1430,11 @@ select:focus {
 }
 
 .legend-line.cyan {
-  background-color: var(--state-ok);
+  background-color: var(--state-ok-text);
 }
 
 .legend-line.orange {
-  background-color: var(--accent);
+  background-color: var(--accent-text);
 }
 
 .legend-line.gold.dashed {

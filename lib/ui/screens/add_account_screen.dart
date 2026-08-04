@@ -17,16 +17,14 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
   final _nicknameCtrl = TextEditingController();
   final _accountNoCtrl = TextEditingController();
   final _meterNoCtrl = TextEditingController();
-  final _balanceCtrl = TextEditingController(text: '0.00');
-  final _monthlyKwhCtrl = TextEditingController(text: '0.0');
+  final _balanceCtrl = TextEditingController(text: '1000');
+  final _monthlyKwhCtrl = TextEditingController(text: '0');
 
-  String _selectedDistributor = 'default';
+  String _selectedDistributor = 'desco';
   bool _isSaving = false;
 
   final List<_DistributorOption> _distributors = const [
     _DistributorOption('desco', 'DESCO (Dhaka Electric)', Icons.electric_bolt),
-    _DistributorOption('dpdc', 'DPDC (Dhaka Power)', Icons.electric_bolt_outlined),
-    _DistributorOption('default', 'Standard Progressive', Icons.bolt),
   ];
 
   bool get _isDescoSelected => _selectedDistributor == 'desco';
@@ -97,7 +95,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('Provider',
+            Text('Distributor provider',
                 style: GoogleFonts.dmSans(
                     fontSize: 12,
                     color: textMuted,
@@ -115,7 +113,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               controller: _nicknameCtrl,
               decoration: const InputDecoration(
                 labelText: 'Nickname',
-                hintText: 'e.g. Home Meter',
+                hintText: 'e.g. My apartment, shop',
                 prefixIcon:
                     Icon(Icons.label_outline, size: 18),
               ),
@@ -130,7 +128,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               controller: _accountNoCtrl,
               decoration: const InputDecoration(
                 labelText: 'Account Number',
-                hintText: 'e.g. 1234567890',
+                hintText: '8-digit account ID',
                 prefixIcon:
                     Icon(Icons.numbers, size: 18),
               ),
@@ -149,7 +147,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               controller: _meterNoCtrl,
               decoration: const InputDecoration(
                 labelText: 'Meter Number',
-                hintText: 'e.g. 98765432',
+                hintText: '8-digit meter serial',
                 prefixIcon:
                     Icon(Icons.electric_meter_outlined, size: 18),
               ),
@@ -168,7 +166,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               TextFormField(
                 controller: _balanceCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Starting Balance (৳)',
+                  labelText: 'Initial Balance (৳)',
                   prefixText: '৳ ',
                   prefixIcon: Icon(Icons.account_balance_wallet_outlined,
                       size: 18),
@@ -185,7 +183,7 @@ class _AddAccountScreenState extends ConsumerState<AddAccountScreen> {
               TextFormField(
                 controller: _monthlyKwhCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Monthly kWh so far',
+                  labelText: 'Current Month Usage (kWh)',
                   suffixText: 'kWh',
                   prefixIcon:
                       Icon(Icons.bolt, size: 18),

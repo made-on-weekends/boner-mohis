@@ -1025,9 +1025,9 @@ function UsageChart({ history, currency = '৳' }) {
 
         {/* Tariff slab reference lines (dashed gold) */}
         {[
-          { rate: 5.32, label: '5.32' },
-          { rate: 6.18, label: '6.18' },
+          { rate: 5.26, label: '5.26' },
           { rate: 8.50, label: '8.50' },
+          { rate: 9.10, label: '9.10' },
         ].map((slab, idx) => {
           const y = getYRate(slab.rate);
           return (

@@ -24,6 +24,16 @@ abstract class FilamentColors {
   static const success = Color(0xFF2E7D3A);
   static const warning = Color(0xFFB25409);
   static const danger = Color(0xFFC22A21);
+
+  // Lightened state variants for text/icons on dark surfaces — the base
+  // success/warning/danger hues fall below 4.5:1 contrast on darkCard/darkBg.
+  static const successOnDark = Color(0xFF6FCB7F);
+  static const emberOnDark = Color(0xFFE8954D);
+  static const dangerOnDark = Color(0xFFE8746A);
+
+  static Color successText(bool isDark) => isDark ? successOnDark : success;
+  static Color emberText(bool isDark) => isDark ? emberOnDark : emberOrange;
+  static Color dangerText(bool isDark) => isDark ? dangerOnDark : danger;
 }
 
 ThemeData filamentLightTheme() {
