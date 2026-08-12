@@ -15,11 +15,14 @@ const _taskName = 'com.bonermohis.balance_check';
 
 /// Notification threshold: alert when fewer than this many days of balance remain.
 const double kLowBalanceThresholdDays = 2.0;
+const int kTwentyFourHoursMs = 24 * 60 * 60 * 1000;
+const int kSixHoursMs = 6 * 60 * 60 * 1000;
+const int kOneHourMs = 1 * 60 * 60 * 1000;
 
 final _notifications = FlutterLocalNotificationsPlugin();
 bool _notificationsInitialized = false;
 
-/// Initialise the notifications plugin and schedule the 12-hourly background check.
+/// Initialise the notifications plugin and schedule the hourly background check.
 /// Wrapped in try/catch so a WorkManager registration failure never crashes startup.
 Future<void> setupNotifications() async {
   try {
@@ -29,10 +32,11 @@ Future<void> setupNotifications() async {
       dispatcherCallbackDispatcher,
     );
 
+    // Register 1-hourly task for API retries and 6-hourly low-balance notification checks
     await Workmanager().registerPeriodicTask(
       _taskName,
       _taskName,
-      frequency: const Duration(hours: 12),
+      frequency: const Duration(hours: 1),
       constraints: Constraints(networkType: NetworkType.connected),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
@@ -55,7 +59,66 @@ Future<void> _ensureNotificationsInitialized() async {
   _notificationsInitialized = true;
 }
 
-/// Fire a low-balance push notification for a single account.
+/// Fire a notification when fresh balance data is successfully synced from DESCO API.
+Future<void> sendSyncedBalanceNotification({
+  required int id,
+  required String nickname,
+  required double balance,
+}) async {
+  await _ensureNotificationsInitialized();
+
+  const androidDetails = AndroidNotificationDetails(
+    _channelId,
+    _channelName,
+    channelDescription: _channelDesc,
+    importance: Importance.defaultImportance,
+    priority: Priority.defaultPriority,
+    icon: '@mipmap/ic_launcher',
+  );
+
+  const details = NotificationDetails(android: androidDetails);
+
+  await _notifications.show(
+    id + 20000,
+    '⚡ Balance Synced: $nickname',
+    'Updated prepaid balance: ৳${balance.toStringAsFixed(2)}',
+    details,
+  );
+}
+
+/// Fire a standard daily balance summary notification for a single account.
+Future<void> sendDailyBalanceNotification({
+  required int id,
+  required String nickname,
+  required double daysRemaining,
+  required double balance,
+}) async {
+  await _ensureNotificationsInitialized();
+
+  const androidDetails = AndroidNotificationDetails(
+    _channelId,
+    _channelName,
+    channelDescription: _channelDesc,
+    importance: Importance.defaultImportance,
+    priority: Priority.defaultPriority,
+    icon: '@mipmap/ic_launcher',
+  );
+
+  const details = NotificationDetails(android: androidDetails);
+
+  final daysText = daysRemaining.isInfinite || daysRemaining.isNaN
+      ? '--'
+      : '~${daysRemaining.toStringAsFixed(1)}';
+
+  await _notifications.show(
+    id + 10000,
+    '⚡ Daily Balance Update: $nickname',
+    '৳${balance.toStringAsFixed(2)} remaining ($daysText days left).',
+    details,
+  );
+}
+
+/// Fire an urgent low-balance push notification for a single account.
 Future<void> sendLowBalanceNotification({
   required int id,
   required String nickname,
@@ -81,7 +144,7 @@ Future<void> sendLowBalanceNotification({
 
   await _notifications.show(
     id,
-    '⚡ Low balance: $nickname',
+    '⚡ Low balance warning: $nickname',
     body,
     details,
   );
@@ -134,10 +197,22 @@ Future<void> _runBalanceCheck() async {
     final db = await _openDb();
     if (db == null) return;
 
+    // Create tracker table if not exists
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS notification_tracker (
+        account_id INTEGER PRIMARY KEY,
+        last_api_sync_success_epoch INTEGER NOT NULL DEFAULT 0,
+        last_daily_notify_epoch INTEGER NOT NULL DEFAULT 0,
+        last_low_balance_notify_epoch INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
     // Re-initialise the plugin inside the background isolate.
     await _ensureNotificationsInitialized();
 
     final rows = await db.query('accounts');
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+
     for (final row in rows) {
       final id = row['id'] as int;
       final nickname = row['nickname'] as String;
@@ -148,8 +223,31 @@ Future<void> _runBalanceCheck() async {
       double balance = (row['balance'] as num).toDouble();
       double yesterdayUsage = (row['yesterday_usage'] as num).toDouble();
 
-      // Attempt live API balance check for DESCO accounts in background
-      if (distributor == 'desco' && accountNo.isNotEmpty && meterNo.isNotEmpty) {
+      // Read last notification & sync timestamps
+      final trackerRows = await db.query(
+        'notification_tracker',
+        where: 'account_id = ?',
+        whereArgs: [id],
+      );
+      int lastApiSyncSuccess = 0;
+      int lastDaily = 0;
+      int lastLow = 0;
+      if (trackerRows.isNotEmpty) {
+        lastApiSyncSuccess =
+            trackerRows.first['last_api_sync_success_epoch'] as int? ?? 0;
+        lastDaily =
+            trackerRows.first['last_daily_notify_epoch'] as int? ?? 0;
+        lastLow =
+            trackerRows.first['last_low_balance_notify_epoch'] as int? ?? 0;
+      }
+
+      // Check if DESCO API sync is due (once every 24 hours).
+      // If last sync failed, (nowMs - lastApiSyncSuccess) remains >= 24h, retrying hourly.
+      bool freshSyncSucceeded = false;
+      if (distributor == 'desco' &&
+          accountNo.isNotEmpty &&
+          meterNo.isNotEmpty &&
+          (nowMs - lastApiSyncSuccess) >= kTwentyFourHoursMs) {
         try {
           http.Client client;
           try {
@@ -172,12 +270,13 @@ Future<void> _runBalanceCheck() async {
                 final data = obj['data'] as Map<String, dynamic>;
                 if (data['balance'] is num) {
                   balance = (data['balance'] as num).toDouble();
-                  final now = DateTime.now().millisecondsSinceEpoch;
+                  lastApiSyncSuccess = nowMs;
+                  freshSyncSucceeded = true;
                   await db.update(
                     'accounts',
                     {
                       'balance': balance,
-                      'last_updated': now,
+                      'last_updated': nowMs,
                     },
                     where: 'id = ?',
                     whereArgs: [id],
@@ -189,20 +288,62 @@ Future<void> _runBalanceCheck() async {
             client.close();
           }
         } catch (_) {
-          // If background network fetch fails, fallback to local stored balance
+          // If background network fetch fails, keep lastApiSyncSuccess unchanged
+          // so next hourly WorkManager task retries network check.
         }
       }
 
-      if (yesterdayUsage <= 0) continue;
-      final days = balance / yesterdayUsage;
-      if (days <= kLowBalanceThresholdDays) {
-        await sendLowBalanceNotification(
+      // 1. If fresh API balance sync succeeded, push balance notification immediately
+      if (freshSyncSucceeded) {
+        await sendSyncedBalanceNotification(
           id: id,
           nickname: nickname,
-          daysRemaining: days,
           balance: balance,
         );
+        lastDaily = nowMs;
       }
+
+      if (yesterdayUsage <= 0) {
+        // Save updated timestamps
+        await db.insert(
+          'notification_tracker',
+          {
+            'account_id': id,
+            'last_api_sync_success_epoch': lastApiSyncSuccess,
+            'last_daily_notify_epoch': lastDaily,
+            'last_low_balance_notify_epoch': lastLow,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        continue;
+      }
+
+      final days = balance / yesterdayUsage;
+
+      // 2. Low balance notification check every 6 hours (using stored DB balance)
+      if (days <= kLowBalanceThresholdDays) {
+        if ((nowMs - lastLow) >= kSixHoursMs) {
+          await sendLowBalanceNotification(
+            id: id,
+            nickname: nickname,
+            daysRemaining: days,
+            balance: balance,
+          );
+          lastLow = nowMs;
+        }
+      }
+
+      // Save updated tracker timestamps
+      await db.insert(
+        'notification_tracker',
+        {
+          'account_id': id,
+          'last_api_sync_success_epoch': lastApiSyncSuccess,
+          'last_daily_notify_epoch': lastDaily,
+          'last_low_balance_notify_epoch': lastLow,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
 
     await db.close();
@@ -218,4 +359,6 @@ Future<Database?> _openDb() async {
     return null;
   }
 }
+
+
 

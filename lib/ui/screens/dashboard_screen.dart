@@ -8,28 +8,43 @@ import '../widgets/account_card.dart';
 import 'detail_screen.dart';
 import 'add_account_screen.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(repositoryProvider).syncAllAccounts();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsStreamProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         isDark ? FilamentColors.textPrimaryDark : FilamentColors.textPrimary;
 
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: FilamentColors.emberOrange,
-                borderRadius: BorderRadius.circular(6),
+            SizedBox(
+              width: 26,
+              height: 25,
+              child: CustomPaint(
+                painter: ChargeBarLogoPainter(
+                  fgColor: textPrimary,
+                  accentColor: FilamentColors.emberText(isDark),
+                ),
               ),
-              child: const Icon(Icons.bolt, color: Colors.white, size: 16),
             ),
             const SizedBox(width: 10),
             Text('Boner Mohis',
@@ -164,5 +179,53 @@ class _EmptyState extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class ChargeBarLogoPainter extends CustomPainter {
+  final Color fgColor;
+  final Color accentColor;
+
+  const ChargeBarLogoPainter({
+    required this.fgColor,
+    required this.accentColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scaleX = size.width / 950.0;
+    final scaleY = size.height / 900.0;
+
+    final fgPaint = Paint()..color = fgColor..style = PaintingStyle.fill;
+    final accentPaint = Paint()..color = accentColor..style = PaintingStyle.fill;
+
+    // Base band: Y from 700 to 900 in Flutter top-left canvas space.
+    canvas.drawRect(
+      Rect.fromLTWH(0, 700.0 * scaleY, 950.0 * scaleX, 200.0 * scaleY),
+      fgPaint,
+    );
+
+    // Segment 1 (h=230 above base, Y from 470 to 700)
+    canvas.drawRect(
+      Rect.fromLTWH(0, 470.0 * scaleY, 230.0 * scaleX, 230.0 * scaleY),
+      fgPaint,
+    );
+
+    // Segment 2 (h=465 above base, Y from 235 to 700)
+    canvas.drawRect(
+      Rect.fromLTWH(360.0 * scaleX, 235.0 * scaleY, 230.0 * scaleX, 465.0 * scaleY),
+      fgPaint,
+    );
+
+    // Segment 3 (h=700 above base, Y from 0 to 700)
+    canvas.drawRect(
+      Rect.fromLTWH(720.0 * scaleX, 0, 230.0 * scaleX, 700.0 * scaleY),
+      accentPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant ChargeBarLogoPainter oldDelegate) {
+    return oldDelegate.fgColor != fgColor || oldDelegate.accentColor != accentColor;
   }
 }

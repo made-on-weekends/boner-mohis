@@ -306,4 +306,14 @@ class ElectricityRepository {
       return e.toString();
     }
   }
+
+  Future<void> syncAllAccounts() async {
+    final accounts = await accountDao.getAll();
+    for (final account in accounts) {
+      if (account.id != null && account.distributor == 'desco') {
+        await syncAccount(account.id!);
+      }
+    }
+  }
 }
+

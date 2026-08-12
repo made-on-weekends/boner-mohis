@@ -183,8 +183,8 @@ class _UsageChartState extends State<UsageChart> {
                 label: 'Cost (${widget.currency})',
                 dashed: false),
             const SizedBox(width: 16),
-            _LegendItem(
-                color: const Color(0xFFD4AF37),
+            const _LegendItem(
+                color: Color(0xFFD4AF37),
                 label: 'Rate/unit',
                 dashed: true),
           ],
