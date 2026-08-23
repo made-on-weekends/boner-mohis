@@ -324,61 +324,20 @@ function App() {
       {/* ── Header ── */}
       <header className="app-header">
         <div className="logo-area">
-          {view === 'detail' && (
-            <button className="btn-back" onClick={goBack} title="Back to Dashboard">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-          )}
           <div className="title-sub">
             <div className="logo-area" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg viewBox="0 0 950 900" width="24" height="23" style={{ flexShrink: 0 }} aria-hidden="true">
-                <g transform="translate(0, 900) scale(1, -1)">
-                  <path d="M0 0 L950.0 0 L950.0 200.0 L0 200.0 Z" fill="var(--text-primary, var(--fg, currentColor))" />
-                  <path d="M 0,198.5 h 230 v 230 H 0 Z" fill="var(--text-primary, var(--fg, currentColor))" />
-                  <path d="M 360,199 H 590 V 664 H 360 Z" fill="var(--text-primary, var(--fg, currentColor))" />
-                  <path d="M720.0 200.0 L950.0 200.0 L950.0 900.0 L720.0 900.0 Z" fill="var(--accent)" />
+              <svg viewBox="0 0 100 100" width="28" height="28" style={{ flexShrink: 0 }} role="img" aria-label="Boner Mohis">
+                <g transform="translate(8.140,13.163) scale(0.8372)">
+                  <path d="M 14 56 L 38 46 L 62 52 L 86 32" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="86" cy="32" r="7" fill="var(--accent)" />
                 </g>
               </svg>
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 500, fontSize: '24px' }}>Boner Mohis</span>
             </div>
-            <span className="sub-label">
-              {view === 'detail' && activeAccount ? activeAccount.nickname : 'Prepaid Electricity Meter Genius'}
-            </span>
+            <span className="sub-label">Prepaid Electricity Meter Genius</span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {view === 'detail' && (
-            <>
-              <button
-                className={`btn-icon${isSyncing ? ' spinning' : ''}`}
-                title="Sync account"
-                onClick={() => handleSync()}
-                disabled={isSyncing}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.61L21 8" />
-                  <polyline points="21 3 21 8 16 8" />
-                </svg>
-              </button>
-              <button
-                className="btn-icon btn-icon-danger"
-                title="Delete account"
-                onClick={handleDelete}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6l-1 14H6L5 6" />
-                  <path d="M10 11v6M14 11v6" />
-                  <path d="M9 6V4h6v2" />
-                </svg>
-              </button>
-            </>
-          )}
           {view === 'dashboard' && (
             <button
               id="btn-toggle-add-form"
@@ -513,9 +472,44 @@ function App() {
                   <div className="detail-row-one-left">
                     {/* Account identity header */}
                     <div className="card-header">
-                      <div className="account-meta">
-                        <span className="nickname-title">{activeAccount.nickname}</span>
-                        <span className="account-no-label">A/C &middot; {activeAccount.accountNo}</span>
+                      <div className="account-meta-with-back" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button className="btn-back" onClick={goBack} title="Back to Dashboard" aria-label="Back to Dashboard">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="15 18 9 12 15 6" />
+                          </svg>
+                        </button>
+                        <div className="account-meta">
+                          <span className="nickname-title">{activeAccount.nickname}</span>
+                          <span className="account-no-label">A/C &middot; {activeAccount.accountNo} &middot; {activeAccount.distributor.toUpperCase()}</span>
+                        </div>
+                      </div>
+                      <div className="account-actions" style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          className={`btn-icon${isSyncing ? ' spinning' : ''}`}
+                          title="Sync account"
+                          onClick={() => handleSync()}
+                          disabled={isSyncing}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.61L21 8" />
+                            <polyline points="21 3 21 8 16 8" />
+                          </svg>
+                        </button>
+                        <button
+                          className="btn-icon btn-icon-danger"
+                          title="Delete account"
+                          onClick={handleDelete}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14H6L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                            <path d="M9 6V4h6v2" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                     {/* Balance */}
@@ -528,8 +522,10 @@ function App() {
                           {activeAccount.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
-                      <ChargeBar monthlyKwh={activeAccount.monthlyKwh} loading={isSyncing} />
                       <span className="balance-label">Remaining balance</span>
+                      <div className="balance-freshness" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        as of {activeAccount.lastUpdated ? new Date(activeAccount.lastUpdated).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : 'recently'} &middot; {activeAccount.distributor === 'desco' ? 'synced' : 'manual entry'}
+                      </div>
                     </div>
 
                     {/* 8-card info grid — 4 cols × 2 rows */}

@@ -1,7 +1,7 @@
 ---
-version: alpha
-name: Filament Style System
-description: Warm paper themed layout with ember orange accents, 1px/1.5px borders, Space Grotesk/DM Sans typography, and charge indicators.
+version: 2.1.0
+name: Filament Style System — Boner Mohis
+description: Warm paper themed layout with ember orange accents, 12px base radius, Space Grotesk/DM Sans typography, and charge indicators.
 colors:
   primary: "#B25409"
   secondary: "#535046"
@@ -39,117 +39,257 @@ components:
     textColor: "#FFFFFF"
     rounded: "{rounded.sm}"
   button-primary-hover:
-    backgroundColor: "#8A4108"
+    backgroundColor: "{colors.warning}"
+    textColor: "#FFFFFF"
+  card-default:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.fg}"
+    rounded: "{rounded.md}"
+  badge-success:
+    backgroundColor: "{colors.success}"
+    textColor: "#FFFFFF"
+  badge-secondary:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.secondary}"
+  badge-muted:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.muted}"
+  badge-danger:
+    backgroundColor: "{colors.danger}"
+    textColor: "#FFFFFF"
 ---
 
-# DESIGN.md
+# DESIGN.md — বনের মহিষ / Boner Mohis
 
-> Self-contained design-system source of truth. Conforms to the [design.md spec](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md): YAML frontmatter holds machine-readable tokens; the body holds human rationale. This doc owns the values; `BRAND.md` owns identity.
+**Brand:** Boner Mohis (Latin wordmark) · Bangla secondary: বনের মহিষ  
+**Product:** Prepaid electricity meter tracker for **DESCO prepaid** users — balance, usage, low-balance warnings. Android app + Chrome extension.  
+**Owner:** Adommo LLC (product line) · **Market:** Bangladesh  
+**System name (internal only, never shown):** Filament  
+**Version:** 2.1.0 · **Updated:** 2026-08-21
 
-## Overview
+> **Changelog 2.1.0 (fresh restart — supersedes all prior locks):**
+> 1. Logo locked: **Spark-line** mark + Latin **Boner Mohis** wordmark (Space Grotesk 500, outlined). New §7.5.
+> 2. Wordmark hero is now **Latin** per founder decision; Bangla wordmark demoted to localized/secondary. §1, §4 updated.
+> 3. Dark-mode semantic table completed — five missing tokens added, all WCAG-verified. §3.
+> 4. §4.3 corrected: the name has **no conjuncts**; the real risk is matra/vowel-sign placement and the ষ glyph.
+> 5. Light focus-ring contrast corrected 3.42 → **3.23** (still ≥3 UI threshold).
 
-The Filament Style System provides a clean, premium, warm aesthetic ("Warm Paper") designed to feel calm and utility-focused. It avoids neons, dynamic Material 3 colors, and heavy gradients, preferring clean card outlines, 1px/1.5px borders, and custom 1.5px stroke icons.
+---
 
-## Colors
+## 1. Overview
 
-The system uses a warm, low-contrast palette for light and dark modes with a prominent Ember Orange primary accent.
+Know your DESCO prepaid balance, see usage patterns, and get warned days before the balance runs out.
 
-| Token       | Hex / value | Usage          |
-|-------------|-------------|----------------|
-| `primary`   | `#B25409`   | Ember Orange primary accent and warning color |
-| `secondary` | `#535046`   | Secondary body text, currency symbols |
-| `bg`        | `#F9F6F0`   | Warm Paper background (Light Mode) |
-| `fg`        | `#181510`   | Primary high-contrast text |
-| `muted`     | `#756F61`   | Sub-labels and decorative indicators |
-| `success`   | `#2E7D3A`   | Safe billing tiers / good balance states |
-| `warning`   | `#B25409`   | Medium warning threshold / low balance |
-| `danger`    | `#C22A21`   | Critical warnings / high slab consumption |
+**Essence:** Never surprised by an empty meter.  
+**Tagline:** বাতি জ্বলতে থাকুক — *keep the lights on.*  
+**Name:** বনের মহিষ / Boner Mohis — the wild buffalo. Unbothered, unhurried, impossible to catch off guard.
 
-## Typography
+### Name lockup rule (v2.1)
 
-Typography establishes clear visual hierarchy using high-character display faces paired with highly readable body and tabular typefaces.
+| Surface | Form |
+|---|---|
+| Primary wordmark / logo, store listings, marketing | **Boner Mohis** — Latin, Space Grotesk 500 (the locked hero) |
+| Bangla surfaces / localized headings | **বনের মহিষ** — Baloo Da 2, secondary/localized wordmark |
+| App UI copy | Bangla-first per §9 (the logo is Latin; the interface is Bangla) |
+| Domain / package / handles | `bonermohis.com` |
+| Spoken | Bangla pronunciation always |
 
-- Font families:
-  - Display: `Space Grotesk` (Medium/500) for large header displays, balances, and cards.
-  - Body: `DM Sans` (Regular/400 and Medium/500) for content, captions, and buttons.
-  - Mono: `DM Mono` (Medium/500) for currency symbols and tabular data listings.
-- Font weights in use: 400 (Regular), 500 (Medium), 700 (Bold)
-- Type scale:
+### Data source — DESCO prepaid; design supports both states
 
-| Token       | Size | Line height | Usage          |
-|-------------|------|-------------|----------------|
-| `text-xs`   | 11px | 1.2         | Badges, captions, helper text |
-| `text-sm`   | 12px | 1.3         | Labels, details table text |
-| `text-base` | 15px | 1.6         | Standard body text, inputs |
-| `text-lg`   | 18px | 1.4         | Subheaders, small display fields |
-| `heading-2` | 24px | 1.2         | Component / view titles |
-| `heading-1` | 44px | 1.0         | Balance and large meter displays |
+DESCO prepaid has no confirmed public balance API, and Play Store restricts SMS-reading permissions — so the product is **manual-entry-first**, with an optional linked/portal-derived sync as a second-class enhancement. Both states appear in every balance surface:
+- `as of 9:12pm · synced`
+- `as of 9:12pm · manual entry`
 
-## Layout
+The design must **never imply official DESCO affiliation** (see §10, §12).
 
-- Spacing scale:
-  - `4px` (gap between badge/nickname, input icons)
-  - `8px` (stat-card padding, gap between stats grid elements)
-  - `12px` (inner padding of sub-items, small gap spacing)
-  - `16px` (main inner padding of cards, grid row gaps)
-  - `24px` (outer layout padding, page gutters)
-  - `32px` (empty state hero spacing)
-- Container max-width: 100% (Chrome extension popup runs fluidly)
-- Grid: 2-column or 4-column item grids depending on viewport size.
+---
 
-## Elevation & Depth
+## 2. Design principles
 
-To match the clean, card-outline styling, the system relies on flat borders instead of soft drop shadows:
-- Borders: `1px solid var(--border-color)` (`#E2DCCF` in Light Mode, `#38342C` in Dark Mode)
-- Card accent border: Left edge highlighted with `3px solid var(--accent)`
-- Hover elevation: Slight translation up `translateY(-1px)` and subtle shadow glow `box-shadow: 0 6px 20px rgba(178, 84, 9, 0.14)`
+1. **Glanceable first.** Days remaining and the charge bar read across a room.
+2. **Calm, never alarmist.** The product reduces meter anxiety.
+3. **Numbers are sacred.** Balance, units, taka in mono, generously sized, always with a freshness timestamp *and its source*.
+4. **Ember means attention, calmly.** The accent doubles as the low-balance state.
+5. **Warm domestic light.** Never cold black glass; dark mode is first-class.
 
-## Shapes
+---
 
-Standard rounded borders:
-- `lg` (`16px`): Primary container cards and view panels.
-- `md` (`12px`): Inner tooltips, interactive grids, and utility modules.
-- `sm` (`8px`): Form inputs, badges, and action buttons.
+## 3. Color
 
-## Components
+Ember on warm soot neutrals. **All pairings WCAG 2.1 AA verified computationally.**
 
-- **Buttons:** Primary buttons use Ember Orange bg with white text and `8px` border radius. Secondary buttons use transparent/card-bg with a border and dark text.
-- **ChargeBar:** Represents monthly consumption partitioned into 6 distinct segments. Each segment's fill color reveals a portion of the green (0 kWh) to red (600 kWh) gradient.
-- **Empty States:** A full container card featuring a large alert icon, description text, and a prompt button to add the first meter account.
-- **Alerts:** Bordered banners matching the warning/danger state color with inline SVG warning icons.
+### Neutral — soot
+| Token | Hex |
+|---|---|
+| soot-50 | `#F9F6F0` |
+| soot-100 | `#F1EDE4` |
+| soot-200 | `#E2DCCF` |
+| soot-300 | `#C9C2B1` |
+| soot-400 | `#9E9787` |
+| soot-500 | `#756F61` |
+| soot-600 | `#535046` |
+| soot-700 | `#38352E` |
+| soot-800 | `#232019` |
+| soot-900 | `#181510` |
+| soot-950 | `#131210` *(dark sunken fill)* |
 
-## Do's and Don'ts
+### Signal — ember
+| Token | Hex |
+|---|---|
+| ember-300 | `#F5A96B` |
+| ember-400 | `#E88540` |
+| ember-500 | `#D96A14` |
+| ember-600 | `#B25409` |
+| ember-700 | `#8A4108` |
 
-**Do:**
-- Always use tokens, never raw hex/px values in components.
-- Pair color choices with sufficient contrast (WCAG AA minimum).
-- Make sure to use the correct type scale when showing numerical values.
+### Semantic — light (on bg `#F9F6F0`)
+| Role | Hex | Contrast |
+|---|---|---|
+| background | `#F9F6F0` | — |
+| surface | `#FFFFFF` | — |
+| surface-sunken | `#F1EDE4` | — |
+| text | `#181510` | 16.50:1 |
+| text-secondary | `#535046` | 7.18:1 |
+| text-muted | `#756F61` | 4.60:1 |
+| border | `#E2DCCF` | — |
+| border-strong (inputs) | `#9E9787` | 3.12:1 |
+| accent / low tier | `#B25409` | 4.88:1 |
+| accent-hover | `#8A4108` | — |
+| focus ring | `#D96A14` | **3.23:1** (UI threshold ≥3) |
+| text-on-accent | `#FFFFFF` | 5.04:1 on accent |
+| ok tier | `#2E7D3A` | 4.74:1 |
+| critical tier | `#C22A21` | 5.34:1 |
 
-**Don't:**
-- Don't use neons, background gradients, or dynamic Material 3 coloring.
-- Don't use drop shadows unless they represent interactive element hover states.
-
-<!-- Sections below are project extensions beyond the design.md spec; the spec preserves unknown sections without error. -->
-
-## Dark mode
-
-Implemented via CSS system preference media queries (`@media (prefers-color-scheme: dark)`). The style system swaps the core variables to a Warm-Dark theme:
-- `--bg-color`: `#1C1914`
-- `--card-bg`: `#25221C`
-- `--border-color`: `#38342C`
-- `--text-primary`: `#F0ECE3`
-- `--text-secondary`: `#B2AEA2`
-- `--text-muted`: `#8E897D`
-
-### State text variants (dark mode)
-
-`success`/`warning`/`danger`/`accent` are tuned for light backgrounds and drop below the 4.5:1 WCAG AA minimum when used as text, icon fill, or chart marks directly on `--card-bg`/`--bg-color` in dark mode. Use these lightened variants for **text, icons, chart lines/dots, and legend swatches** on dark surfaces; keep the base tones for borders and alpha-tinted backgrounds, which stay legible as-is.
-
-| Token | Light (base) | Dark (text variant) | Usage |
+### Semantic — dark, first-class (on bg `#181510`) — **completed v2.1**
+| Role | Hex | Contrast | Note |
 |---|---|---|---|
-| `--state-ok-text` | `#2E7D3A` | `#6FCB7F` | Success/good-balance text, chart kWh line & dots, legend |
-| `--state-low-text` | `#B25409` | `#E8954D` | Warning/low-balance text |
-| `--state-critical-text` | `#C22A21` | `#E8746A` | Danger/critical text, delete icon, error banners |
-| `--accent-text` | `#B25409` | `#E8954D` | Ember accent used as text (forecast values, chart cost line) |
+| background | `#181510` | — | warm dark, never black glass |
+| surface | `#232019` | — | |
+| surface-sunken | `#131210` | — | subtle inset fill |
+| text | `#EFEBE2` | 15.30:1 | |
+| text-secondary | `#C9C2B1` | 10.26:1 | |
+| text-muted | `#9E9787` | 6.27:1 | |
+| border | `#38352E` | — | hairlines only |
+| border-strong (inputs) | `#9E9787` | 6.27 / 5.60:1 | use as input outline |
+| accent / low tier | `#E88540` | 6.81:1 | |
+| accent-hover | `#F5A96B` | — | fill; pairs with `#181510` label (9.34:1) |
+| focus ring | `#D96A14` | 5.22 / 4.66:1 | verified on bg + surface |
+| **text-on-accent** | `#181510` | **6.81:1** | critical. White on ember-400 is 2.67:1 and fails; labels on a dark-mode ember fill MUST be soot-900 |
+| ok tier | `#6FBF7C` | 8.17:1 | |
+| critical tier | `#F0736A` | 6.38:1 | |
 
-Flutter equivalents live in `FilamentColors.successText(isDark)`, `emberText(isDark)`, `dangerText(isDark)` (`lib/ui/theme/filament_theme.dart`).
+### Rules
+- **No separate warning colour.** Ember *is* the warning. Tiers: **ok green · low ember · critical red.**
+- Accent appears on primary actions, links, and the low-balance state.
+- No gradients. Never pure white or pure black backgrounds. No neon.
+
+---
+
+## 4. Typography — bilingual
+
+| Role | Family | Usage |
+|---|---|---|
+| **Latin wordmark / logo** | **Space Grotesk** (Medium 500) | The hero wordmark "Boner Mohis" — outlined in the logo files |
+| Latin display / balance figure | **Space Grotesk** (Medium) | Hero balance number, Latin headings |
+| Latin body / UI | **DM Sans** | Latin interface text |
+| **Bangla display / secondary wordmark** | **Baloo Da 2** | বনের মহিষ (localized), Bangla headings |
+| **Bangla body / UI** | **Noto Sans Bengali** | All Bangla interface text |
+| Mono | **DM Mono** | Units, taka, timestamps, logs |
+
+All SIL OFL, bundled in-app. **Type scale:** 13 / 15 / 17 / 21 / 26 / 32 / 44 px. Radius **12px**.
+
+### Bilingual rules (locked)
+1. **Latin numerals always** for balance, units, taka, timestamps — DM Mono, even inside Bangla UI.
+2. **Bangla needs its own leading** — ~+0.15 line-height over the Latin equivalent.
+3. **Glyph check before lock:** বনের মহিষ contains **no conjuncts**. Real rendering risks are matra / vowel-sign placement and the ষ glyph.
+4. Mixed-script data lines always use the Latin numeral form.
+
+---
+
+## 5. Space, shape, elevation
+
+| Property | Value |
+|---|---|
+| Spacing grid | 8px — 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 |
+| Corner radius | **12px** base · 8px small · 999px pill |
+| Border width | 1px |
+| Shadow | `0 2px 8px rgba(24,21,16,0.08)` — home balance card only |
+| Content max-width | 480px app · 1040px marketing |
+| Breakpoints | 640 / 900 / 1200 px |
+| Touch target min | **48px** |
+| Density | Roomy throughout |
+
+---
+
+## 6. Component library specification
+
+Foundations, primitives, composites, navigation/shell, domain components, states.
+The freshness row — timestamp + `synced`/`manual entry` in mono — appears under every balance figure.
+
+---
+
+## 7. Signature element — the charge bar (in-app UI)
+
+A segmented horizontal level indicator: filled segments solid, the active segment glowing ember, remaining segments hollow outlines. **Permitted uses:** the balance display, state indicators, the loading motif.
+
+**Never style it to resemble a phone battery icon** — banned.  
+**Note (v2.1):** the in-app charge bar is distinct from the brand **spark-line mark** (§7.5); they share the ember accent but are different objects.
+
+---
+
+## 7.5 Logo — LOCKED (v2.1) · "Spark-line"
+
+**Mark:** a spark-**line** — a minimal usage sparkline whose leading point is a solid **ember disc**. It reads as *usage trend + your live balance, glowing*: the graph is the mark, the ember is the signal. No battery, no bolt, no house.
+
+**Geometry (100 viewBox):**
+- Full (≥48px): polyline `M14 56 L38 46 L62 52 L86 32`, stroke-width 6, round caps; ember `circle cx86 cy32 r7`.
+- Compact (≤32px, favicon/toolbar): `M14 56 L50 44 L86 30`, stroke-width 9; ember `r11`.
+
+**Wordmark:** "Boner Mohis" in **Space Grotesk 500, outlined to vector paths** (no live text in any logo file).
+
+**Colour:**
+- Light: stroke soot-900 `#181510`, ember ember-600 `#B25409`.
+- Dark: stroke `#EFEBE2`, ember ember-400 `#E88540`.
+- Mono fallback: stroke + ember both `currentColor`.
+
+**State mechanic:** the ember disc *is* the state signal. Recolour it **ok `#6FBF7C` · low ember · critical `#F0736A`** (dark) / `#2E7D3A · ember · #C22A21` (light) for the extension toolbar icon — one glyph, three states.
+
+---
+
+## 8. Iconography
+
+Lucide-style rounded 1.5px stroke. Domain glyphs: meter, bolt (recharge), bell, home/shop, sync. **Banned:** neon bolts, 3D houses, smart-home renders, **battery icons**.
+
+---
+
+## 9. Voice & tone
+
+Bangla-first UI, domestic-warm, brief. Sentence case. No exclamation marks.
+
+**Notification grammar (locked):**
+`[Meter name]: ~[N] days left ([units] units). Recharge when convenient.`  
+Critical tier drops "when convenient" and adds nothing panicked.
+
+---
+
+## 10. Content conventions
+
+Bangla UI copy with Latin numerals. Realistic data only. **No invented accuracy claims, no fake user counts, no implied affiliation with DESCO or any utility.** No lorem ipsum.
+
+---
+
+## 11. Accessibility
+
+- All pairings meet WCAG 2.1 AA (§3, computationally verified).
+- Focus always visible: 2px `#D96A14` ring, 2px offset — verified in **both** modes.
+- Touch targets ≥48px.
+- State tiers pair colour with a text label — never colour alone.
+
+---
+
+## 12. Compliance notes
+
+- **Play Store SMS policy:** manual-entry-first; functions fully without SMS permissions.
+- **Credential handling:** any linked sync states plainly what is stored and where.
+- **No ads, ever.**
+- **No implied DESCO affiliation** anywhere in mark, copy, or store listing.

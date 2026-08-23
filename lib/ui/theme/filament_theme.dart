@@ -3,33 +3,39 @@ import 'package:google_fonts/google_fonts.dart';
 
 abstract class FilamentColors {
   static const emberOrange = Color(0xFFB25409);
-  static const emberOrangeDark = Color(0xFF8A4108);
+  static const emberOrangeDark = Color(0xFFE88540);
+  static const emberHover = Color(0xFF8A4108);
+  static const emberHoverDark = Color(0xFFF5A96B);
+  static const focusRing = Color(0xFFD96A14);
 
   static const warmPaper = Color(0xFFF9F6F0);
   static const cardBgLight = Color(0xFFFFFFFF);
   static const borderLight = Color(0xFFE2DCCF);
+  static const borderStrongLight = Color(0xFF9E9787);
 
-  static const darkBg = Color(0xFF1C1914);
-  static const darkCard = Color(0xFF25221C);
-  static const darkBorder = Color(0xFF38342C);
+  static const darkBg = Color(0xFF181510);
+  static const darkCard = Color(0xFF232019);
+  static const darkSunken = Color(0xFF131210);
+  static const darkBorder = Color(0xFF38352E);
+  static const darkBorderStrong = Color(0xFF9E9787);
 
   static const textPrimary = Color(0xFF181510);
   static const textSecondary = Color(0xFF535046);
   static const textMuted = Color(0xFF756F61);
 
-  static const textPrimaryDark = Color(0xFFF0ECE3);
-  static const textSecondaryDark = Color(0xFFB2AEA2);
-  static const textMutedDark = Color(0xFF8E897D);
+  static const textPrimaryDark = Color(0xFFEFEBE2);
+  static const textSecondaryDark = Color(0xFFC9C2B1);
+  static const textMutedDark = Color(0xFF9E9787);
+  static const textOnAccentDark = Color(0xFF181510);
 
   static const success = Color(0xFF2E7D3A);
   static const warning = Color(0xFFB25409);
   static const danger = Color(0xFFC22A21);
 
-  // Lightened state variants for text/icons on dark surfaces — the base
-  // success/warning/danger hues fall below 4.5:1 contrast on darkCard/darkBg.
-  static const successOnDark = Color(0xFF6FCB7F);
-  static const emberOnDark = Color(0xFFE8954D);
-  static const dangerOnDark = Color(0xFFE8746A);
+  // Lightened state variants for dark mode
+  static const successOnDark = Color(0xFF6FBF7C);
+  static const emberOnDark = Color(0xFFE88540);
+  static const dangerOnDark = Color(0xFFF0736A);
 
   static Color successText(bool isDark) => isDark ? successOnDark : success;
   static Color emberText(bool isDark) => isDark ? emberOnDark : emberOrange;
@@ -68,7 +74,7 @@ ThemeData filamentLightTheme() {
       color: FilamentColors.cardBgLight,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: FilamentColors.borderLight),
       ),
       margin: EdgeInsets.zero,
@@ -78,16 +84,16 @@ ThemeData filamentLightTheme() {
       fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: FilamentColors.borderLight),
+        borderSide: const BorderSide(color: FilamentColors.borderStrongLight),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: FilamentColors.borderLight),
+        borderSide: const BorderSide(color: FilamentColors.borderStrongLight),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide:
-            const BorderSide(color: FilamentColors.emberOrange, width: 1.5),
+            const BorderSide(color: FilamentColors.focusRing, width: 2.0),
       ),
       labelStyle: GoogleFonts.dmSans(
           color: FilamentColors.textMuted, fontSize: 15),
@@ -130,12 +136,12 @@ ThemeData filamentDarkTheme() {
   return base.copyWith(
     scaffoldBackgroundColor: FilamentColors.darkBg,
     colorScheme: const ColorScheme.dark(
-      primary: FilamentColors.emberOrange,
-      onPrimary: Colors.white,
+      primary: FilamentColors.emberOrangeDark,
+      onPrimary: FilamentColors.textOnAccentDark,
       secondary: FilamentColors.textSecondaryDark,
       surface: FilamentColors.darkCard,
       onSurface: FilamentColors.textPrimaryDark,
-      error: FilamentColors.danger,
+      error: FilamentColors.dangerOnDark,
     ),
     textTheme: _buildTextTheme(
       bodyColor: FilamentColors.textPrimaryDark,
@@ -156,7 +162,7 @@ ThemeData filamentDarkTheme() {
       color: FilamentColors.darkCard,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: FilamentColors.darkBorder),
       ),
       margin: EdgeInsets.zero,
@@ -166,16 +172,16 @@ ThemeData filamentDarkTheme() {
       fillColor: FilamentColors.darkCard,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: FilamentColors.darkBorder),
+        borderSide: const BorderSide(color: FilamentColors.darkBorderStrong),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: FilamentColors.darkBorder),
+        borderSide: const BorderSide(color: FilamentColors.darkBorderStrong),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide:
-            const BorderSide(color: FilamentColors.emberOrange, width: 1.5),
+            const BorderSide(color: FilamentColors.focusRing, width: 2.0),
       ),
       labelStyle: GoogleFonts.dmSans(
           color: FilamentColors.textMutedDark, fontSize: 15),
@@ -184,8 +190,8 @@ ThemeData filamentDarkTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: FilamentColors.emberOrange,
-        foregroundColor: Colors.white,
+        backgroundColor: FilamentColors.emberOrangeDark,
+        foregroundColor: FilamentColors.textOnAccentDark,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         textStyle:

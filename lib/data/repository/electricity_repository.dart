@@ -137,7 +137,13 @@ class ElectricityRepository {
           return balanceObj['desc']?.toString() ?? 'DESCO API error';
         }
         final data = balanceObj['data'] as Map<String, dynamic>;
-        final liveBalance = (data['balance'] as num).toDouble();
+        double _numToDouble(dynamic val) {
+          if (val == null) return 0.0;
+          if (val is num) return val.toDouble();
+          return double.tryParse(val.toString()) ?? 0.0;
+        }
+
+        final liveBalance = _numToDouble(data['balance']);
 
         final sdf = DateFormat('yyyy-MM-dd');
         final dateTo = sdf.format(DateTime.now());
@@ -153,6 +159,7 @@ class ElectricityRepository {
 
         double yesterdayCost = account.yesterdayUsage;
         double liveMonthlyKwh = 0.0;
+        double baseUnit = 0.0;
 
         try {
           final consumptionRes = await client
@@ -179,27 +186,18 @@ class ElectricityRepository {
                 (e) => !(e['date'] as String).startsWith(currentMonthStr),
                 orElse: () => <String, dynamic>{},
               );
-              final baseUnit = lastOfPrevMonth.isNotEmpty
-                  ? (lastOfPrevMonth['consumedUnit'] as num).toDouble()
-                  : list.firstWhere(
-                          (e) =>
-                              (e['date'] as String).startsWith(currentMonthStr),
-                          orElse: () => latestEntry,
-                        )['consumedUnit']
-                        is num
-                  ? (list.firstWhere(
-                              (e) => (e['date'] as String).startsWith(
-                                currentMonthStr,
-                              ),
-                              orElse: () => latestEntry,
-                            )['consumedUnit']
-                            as num)
-                        .toDouble()
-                  : (latestEntry['consumedUnit'] as num).toDouble();
+              baseUnit = lastOfPrevMonth.isNotEmpty
+                  ? _numToDouble(lastOfPrevMonth['consumedUnit'])
+                  : _numToDouble(
+                      list.firstWhere(
+                        (e) => (e['date'] as String).startsWith(currentMonthStr),
+                        orElse: () => latestEntry,
+                      )['consumedUnit'],
+                    );
 
               liveMonthlyKwh = max(
                 0.0,
-                (latestEntry['consumedUnit'] as num).toDouble() - baseUnit,
+                _numToDouble(latestEntry['consumedUnit']) - baseUnit,
               );
               liveMonthlyKwh = (liveMonthlyKwh * 1000).roundToDouble() / 1000.0;
             }
@@ -212,19 +210,31 @@ class ElectricityRepository {
               double dailyCost = 0.0;
 
               if (prev != null) {
-                dailyKwh =
-                    (current['consumedUnit'] as num).toDouble() -
-                    (prev['consumedUnit'] as num).toDouble();
+                final curUnit = _numToDouble(current['consumedUnit']);
+                final prevUnit = _numToDouble(prev['consumedUnit']);
+                final curTaka = _numToDouble(current['consumedTaka']);
+                final prevTaka = _numToDouble(prev['consumedTaka']);
+
+                dailyKwh = max(0.0, curUnit - prevUnit);
                 final curMonth = (current['date'] as String).split('-')[1];
                 final prevMonth = (prev['date'] as String).split('-')[1];
                 if (curMonth == prevMonth) {
-                  dailyCost = max(
-                    0.0,
-                    (current['consumedTaka'] as num).toDouble() -
-                        (prev['consumedTaka'] as num).toDouble(),
-                  );
+                  dailyCost = max(0.0, curTaka - prevTaka);
                 } else {
-                  dailyCost = (current['consumedTaka'] as num).toDouble();
+                  dailyCost = curTaka;
+                }
+
+                // Fallback: If odometer reading did not update (dailyKwh is 0) but cost was billed,
+                // estimate daily kWh using active slab rate.
+                if (dailyKwh == 0.0 && dailyCost > 5.0) {
+                  final curUnitVal = _numToDouble(current['consumedUnit']);
+                  final monthlyKwhAtDate = curUnitVal > 0.0 ? curUnitVal - baseUnit : liveMonthlyKwh;
+                  final slabDetails = CalculationsHelper.getSlabDetails(
+                    max(0.0, monthlyKwhAtDate),
+                    provider: 'desco',
+                  );
+                  final rate = slabDetails.rate > 0 ? slabDetails.rate : 6.18;
+                  dailyKwh = (dailyCost / rate * 1000).roundToDouble() / 1000.0;
                 }
               }
 
@@ -264,11 +274,11 @@ class ElectricityRepository {
               if (lastMonth == secLastMonth) {
                 yesterdayCost = max(
                   0.0,
-                  (last['consumedTaka'] as num).toDouble() -
-                      (secLast['consumedTaka'] as num).toDouble(),
+                  _numToDouble(last['consumedTaka']) -
+                      _numToDouble(secLast['consumedTaka']),
                 );
               } else {
-                yesterdayCost = (last['consumedTaka'] as num).toDouble();
+                yesterdayCost = _numToDouble(last['consumedTaka']);
               }
             }
           }

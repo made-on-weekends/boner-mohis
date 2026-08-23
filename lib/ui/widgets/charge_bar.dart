@@ -30,22 +30,18 @@ class ChargeBar extends StatelessWidget {
   ];
 
   /// Interpolates a green→amber→red colour based on kWh value (0–600).
-  Color _colorForKwh(double val) {
+  Color _colorForKwh(double val, bool isDark) {
     final clamped = val.clamp(0.0, 600.0);
+    final okColor = isDark ? FilamentColors.successOnDark : FilamentColors.success;
+    final emberColor = isDark ? FilamentColors.emberOrangeDark : FilamentColors.emberOrange;
+    final dangerColor = isDark ? FilamentColors.dangerOnDark : FilamentColors.danger;
+
     if (clamped <= 300) {
       final t = clamped / 300.0;
-      return Color.lerp(
-        const Color(0xFF2E7D3A), // dark green
-        const Color(0xFFB25409), // amber-orange
-        t,
-      )!;
+      return Color.lerp(okColor, emberColor, t)!;
     } else {
       final t = (clamped - 300) / 300.0;
-      return Color.lerp(
-        const Color(0xFFB25409), // amber-orange
-        const Color(0xFFC22A21), // deep red
-        t,
-      )!;
+      return Color.lerp(emberColor, dangerColor, t)!;
     }
   }
 
@@ -82,8 +78,8 @@ class ChargeBar extends StatelessWidget {
                 : (monthlyKwh - tier.min).clamp(0.0, rangeWidth);
             final fillFraction = consumed / rangeWidth;
 
-            final startColor = _colorForKwh(tier.min.toDouble());
-            final endColor = _colorForKwh(tier.max.toDouble());
+            final startColor = _colorForKwh(tier.min.toDouble(), isDark);
+            final endColor = _colorForKwh(tier.max.toDouble(), isDark);
 
             return Expanded(
               flex: (tier.weight * 600).round(),

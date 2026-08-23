@@ -146,7 +146,7 @@ export function getSlabDetails(kwh, provider = 'default') {
   // Define slab names and ranges based on index
   const SLAB_CONFIGS = [
     { name: "Lifeline", min: 0, max: 50 },
-    { name: "First Step", min: 51, max: 75 },
+    { name: "First Step", min: kwh > 50.0 ? 0 : 51, max: 75 },
     { name: "Second Step", min: 76, max: 200 },
     { name: "Third Step", min: 201, max: 300 },
     { name: "Fourth Step", min: 301, max: 400 },

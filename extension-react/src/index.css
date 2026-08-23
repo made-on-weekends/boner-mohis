@@ -1,10 +1,12 @@
-/* Filament Style System for Boner Mohis */
+/* Filament Style System for Boner Mohis — v2.1.0 */
 
 :root {
   /* Colors - Light Mode (Warm Paper) */
   --bg-color: #F9F6F0;
   --card-bg: #FFFFFF;
+  --card-sunken: #F1EDE4;
   --border-color: #E2DCCF;
+  --border-strong: #9E9787;
   --text-primary: #181510;
   --text-secondary: #535046;
   --text-muted: #756F61;
@@ -12,15 +14,18 @@
   /* Accent (Ember Orange) */
   --accent: #B25409;
   --accent-pressed: #8A4108;
+  --accent-hover: #8A4108;
   --accent-glow: #E88540;
   --accent-text: #B25409;
+  --text-on-accent: #FFFFFF;
+  --focus-ring: #D96A14;
 
   /* State Tiers */
   --state-ok: #2E7D3A;
   --state-low: #B25409; /* ember */
   --state-critical: #C22A21;
 
-  /* State Tiers — text/icon variants (same as base in light mode) */
+  /* State Tiers — text/icon variants */
   --state-ok-text: #2E7D3A;
   --state-low-text: #B25409;
   --state-critical-text: #C22A21;
@@ -31,24 +36,38 @@
   --font-mono: 'DM Mono', monospace;
 
   /* Dimensions & Spacing */
-  --radius: 16px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Warm-Dark Mode */
-    --bg-color: #1C1914;
-    --card-bg: #25221C;
-    --border-color: #38342C;
-    --text-primary: #F0ECE3;
-    --text-secondary: #B2AEA2;
-    --text-muted: #8E897D;
+    /* Warm-Dark Mode (bg #181510) — v2.1.0 */
+    --bg-color: #181510;
+    --card-bg: #232019;
+    --card-sunken: #131210;
+    --border-color: #38352E;
+    --border-strong: #9E9787;
+    --text-primary: #EFEBE2;
+    --text-secondary: #C9C2B1;
+    --text-muted: #9E9787;
 
-    /* Lightened state variants — base hues fall below 4.5:1 on dark card/bg */
-    --state-ok-text: #6FCB7F;
-    --state-low-text: #E8954D;
-    --state-critical-text: #E8746A;
-    --accent-text: #E8954D;
+    --accent: #E88540;
+    --accent-pressed: #F5A96B;
+    --accent-hover: #F5A96B;
+    --accent-glow: #F5A96B;
+    --accent-text: #E88540;
+    --text-on-accent: #181510; /* Verified 6.81:1 contrast on ember-400 */
+    --focus-ring: #D96A14;
+
+    /* Lightened state variants */
+    --state-ok: #6FBF7C;
+    --state-low: #E88540;
+    --state-critical: #F0736A;
+    --state-ok-text: #6FBF7C;
+    --state-low-text: #E88540;
+    --state-critical-text: #F0736A;
   }
 }
 

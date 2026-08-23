@@ -37,12 +37,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         title: Row(
           children: [
             SizedBox(
-              width: 26,
-              height: 25,
+              width: 28,
+              height: 28,
               child: CustomPaint(
-                painter: ChargeBarLogoPainter(
-                  fgColor: textPrimary,
-                  accentColor: FilamentColors.emberText(isDark),
+                painter: SparkLineLogoPainter(
+                  strokeColor: textPrimary,
+                  emberColor: FilamentColors.emberText(isDark),
                 ),
               ),
             ),
@@ -182,50 +182,49 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class ChargeBarLogoPainter extends CustomPainter {
-  final Color fgColor;
-  final Color accentColor;
+class SparkLineLogoPainter extends CustomPainter {
+  final Color strokeColor;
+  final Color emberColor;
 
-  const ChargeBarLogoPainter({
-    required this.fgColor,
-    required this.accentColor,
+  const SparkLineLogoPainter({
+    required this.strokeColor,
+    required this.emberColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 950.0;
-    final scaleY = size.height / 900.0;
+    final scaleX = size.width / 100.0;
+    final scaleY = size.height / 100.0;
+    final scale = scaleX < scaleY ? scaleX : scaleY;
 
-    final fgPaint = Paint()..color = fgColor..style = PaintingStyle.fill;
-    final accentPaint = Paint()..color = accentColor..style = PaintingStyle.fill;
+    final linePaint = Paint()
+      ..color = strokeColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6.0 * scale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    // Base band: Y from 700 to 900 in Flutter top-left canvas space.
-    canvas.drawRect(
-      Rect.fromLTWH(0, 700.0 * scaleY, 950.0 * scaleX, 200.0 * scaleY),
-      fgPaint,
-    );
+    final discPaint = Paint()
+      ..color = emberColor
+      ..style = PaintingStyle.fill;
 
-    // Segment 1 (h=230 above base, Y from 470 to 700)
-    canvas.drawRect(
-      Rect.fromLTWH(0, 470.0 * scaleY, 230.0 * scaleX, 230.0 * scaleY),
-      fgPaint,
-    );
+    final path = Path()
+      ..moveTo(14.0 * scaleX, 56.0 * scaleY)
+      ..lineTo(38.0 * scaleX, 46.0 * scaleY)
+      ..lineTo(62.0 * scaleX, 52.0 * scaleY)
+      ..lineTo(86.0 * scaleX, 32.0 * scaleY);
 
-    // Segment 2 (h=465 above base, Y from 235 to 700)
-    canvas.drawRect(
-      Rect.fromLTWH(360.0 * scaleX, 235.0 * scaleY, 230.0 * scaleX, 465.0 * scaleY),
-      fgPaint,
-    );
-
-    // Segment 3 (h=700 above base, Y from 0 to 700)
-    canvas.drawRect(
-      Rect.fromLTWH(720.0 * scaleX, 0, 230.0 * scaleX, 700.0 * scaleY),
-      accentPaint,
+    canvas.drawPath(path, linePaint);
+    canvas.drawCircle(
+      Offset(86.0 * scaleX, 32.0 * scaleY),
+      7.0 * scale,
+      discPaint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant ChargeBarLogoPainter oldDelegate) {
-    return oldDelegate.fgColor != fgColor || oldDelegate.accentColor != accentColor;
+  bool shouldRepaint(covariant SparkLineLogoPainter oldDelegate) {
+    return oldDelegate.strokeColor != strokeColor ||
+        oldDelegate.emberColor != emberColor;
   }
 }

@@ -316,9 +316,10 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
                   ),
 
                   const SizedBox(height: 4),
-                  Text('Updated $dateStr',
-                      style: GoogleFonts.dmSans(
-                          fontSize: 11, color: textMuted)),
+                  Text(
+                    'as of $dateStr · ${account.distributor == "desco" ? "synced" : "manual entry"}',
+                    style: GoogleFonts.dmMono(fontSize: 11, color: textMuted),
+                  ),
                 ],
               ),
             ),
@@ -912,7 +913,7 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: borderColor),
       ),
       child: child,

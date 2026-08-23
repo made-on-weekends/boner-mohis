@@ -98,7 +98,7 @@ We are always looking for improvements and additions! Please read the [Contribut
 If **Boner Mohis** makes tracking prepaid electricity balances and usage forecasts seamless:
 - ⭐ **Star this repository** to help others discover the project.
 - 📣 **Spread the word** on X/Twitter or your blog.
-- ☕ **Support the maintainer** via [donation](https://asifiqbal.rocks/donation) to fund further open-source initiatives.
+- ☕ **Support the maintainer** via [donation](https://asifiqbal.rocks/donation?utm_source=boner_mohis&utm_medium=github_readme&utm_campaign=readme&ref=boner-mohis-readme) to fund further open-source initiatives.
 
 ---
 
