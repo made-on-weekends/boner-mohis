@@ -15,8 +15,8 @@ class AccountCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final daysRemaining = CalculationsHelper.calculateDaysRemaining(
         account.balance, account.yesterdayUsage);
-    final isLowBalance =
-        daysRemaining != double.infinity && daysRemaining <= 2.0;
+    final isLowBalance = account.balance <= 0 ||
+        (daysRemaining != double.infinity && daysRemaining <= 2.0);
     final slabDetails = CalculationsHelper.getSlabDetails(account.monthlyKwh,
         provider: account.distributor);
     final dist = CalculationsHelper.distributors[account.distributor] ??

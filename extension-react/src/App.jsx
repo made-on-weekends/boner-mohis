@@ -87,17 +87,10 @@ function App() {
 
   // Add Account Form inputs
   const [nickname, setNickname] = useState('');
-  const [provider, setProvider] = useState('desco');
   const [accountNo, setAccountNo] = useState('');
   const [meterNo, setMeterNo] = useState('');
-  const [balance, setBalance] = useState('1000');
-  const [monthlyKwh, setMonthlyKwh] = useState('0');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
-
-  // Simulator / operations state
-  const [topUpAmount, setTopUpAmount] = useState('');
-  const [isSimulating, setIsSimulating] = useState(false);
 
   // Sync action
   const handleSync = async (id = selectedAccountId) => {
@@ -106,51 +99,12 @@ function App() {
     setSyncError(null);
     try {
       await providers.syncAccount(id);
-      await refreshAccounts(id, false);
+      await refreshAccounts(id);
     } catch (err) {
       console.error('Auto-sync failed:', err);
       setSyncError(err.message || 'Failed to sync with live API');
     } finally {
       setIsSyncing(false);
-    }
-  };
-
-  // Simulate 24H for mock accounts
-  const handleSimulate = async () => {
-    if (!selectedAccountId || isSimulating) return;
-    setIsSimulating(true);
-    try {
-      await providers.simulateDay(selectedAccountId);
-      await refreshAccounts(selectedAccountId, false);
-    } catch (err) {
-      console.error('Simulate failed:', err);
-    } finally {
-      setIsSimulating(false);
-    }
-  };
-
-  // Reset billing cycle for mock accounts
-  const handleResetCycle = async () => {
-    if (!selectedAccountId) return;
-    if (!window.confirm('Reset monthly usage to zero? This simulates a new billing cycle.')) return;
-    try {
-      await providers.resetBillingCycle(selectedAccountId);
-      await refreshAccounts(selectedAccountId, false);
-    } catch (err) {
-      console.error('Reset failed:', err);
-    }
-  };
-
-  // Top up balance for mock accounts
-  const handleTopUp = async () => {
-    const amt = parseFloat(topUpAmount);
-    if (!selectedAccountId || isNaN(amt) || amt <= 0) return;
-    try {
-      await providers.topUpBalance(selectedAccountId, amt);
-      setTopUpAmount('');
-      await refreshAccounts(selectedAccountId, false);
-    } catch (err) {
-      console.error('Top-up failed:', err);
     }
   };
 
@@ -161,6 +115,7 @@ function App() {
       await refreshAccounts();
     }
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-sync active DESCO account when entering detail view
@@ -170,10 +125,11 @@ function App() {
     if (active && active.distributor === 'desco') {
       handleSync(selectedAccountId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, selectedAccountId]);
 
   // Fetch accounts
-  const refreshAccounts = async (selectId = null, navigate = true) => {
+  const refreshAccounts = async (selectId = null) => {
     const list = await db.getAccounts();
     setAccounts(list);
 
@@ -237,14 +193,13 @@ function App() {
       return;
     }
 
-    const isDesco = provider === 'desco';
     const newAcc = {
       nickname: nickname.trim(),
-      distributor: provider,
+      distributor: 'desco',
       accountNo: accountNo.trim(),
       meterNo: meterNo.trim(),
-      balance: isDesco ? 0 : (parseFloat(balance) || 0),
-      monthlyKwh: isDesco ? 0 : (parseFloat(monthlyKwh) || 0),
+      balance: 0,
+      monthlyKwh: 0,
       yesterdayUsage: 0,
     };
 
@@ -252,15 +207,14 @@ function App() {
     const created = list[list.length - 1];
 
     setNickname('');
-    setProvider('desco');
     setAccountNo('');
     setMeterNo('');
-    setBalance('1000');
-    setMonthlyKwh('0');
     setShowAddModal(false);
 
-    if (isDesco) {
-      try { await providers.syncAccount(created.id); } catch (_) {}
+    try {
+      await providers.syncAccount(created.id);
+    } catch (err) {
+      console.error('Initial DESCO sync failed:', err);
     }
 
     await refreshAccounts(created.id);
@@ -271,7 +225,7 @@ function App() {
     const days = calculateDaysRemaining(acc.balance, acc.yesterdayUsage);
     const slab = getSlabDetails(acc.monthlyKwh, acc.distributor);
     const dist = DISTRIBUTORS[acc.distributor] || DISTRIBUTORS.default;
-    const low  = days <= 2.0 && days !== Infinity && acc.yesterdayUsage > 0;
+    const low  = acc.balance <= 0 || (days <= 2.0 && days !== Infinity && acc.yesterdayUsage > 0);
     return { days, slab, dist, low };
   };
 
@@ -291,9 +245,11 @@ function App() {
   // ── Extended card metrics ─────────────────────────────────────────────
   const computeCardMetrics = (acc) => {
     const dist = DISTRIBUTORS[acc.distributor] || DISTRIBUTORS.default;
-    const daysElapsed   = history.length || 1;
-    const dailyAvgKwh   = acc.monthlyKwh / daysElapsed;
     const now           = new Date();
+    const currentMonthPrefix = now.toISOString().slice(0, 7);
+    const currentMonthRecords = history.filter(h => h.date && h.date.startsWith(currentMonthPrefix));
+    const daysElapsed   = currentMonthRecords.length || Math.max(1, now.getDate() - 1);
+    const dailyAvgKwh   = acc.monthlyKwh / daysElapsed;
     const daysInMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     // yesterday is the last full day we have data for, so remaining = daysInMonth - (today - 1)
     const daysRemaining = Math.max(daysInMonth - (now.getDate() - 1), 0);
@@ -338,6 +294,23 @@ function App() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <a
+            href="https://asifiqbal.rocks/donation?utm_source=boner_mohis&utm_medium=chrome_extension&utm_campaign=popup&ref=boner-mohis-chrome-extension"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-icon"
+            title="Support the Maintainer (Donate)"
+            style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none"
+              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 8h1a4 4 0 0 1 0 8h-1" />
+              <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" />
+              <line x1="6" y1="2" x2="6" y2="4" />
+              <line x1="10" y1="2" x2="10" y2="4" />
+              <line x1="14" y1="2" x2="14" y2="4" />
+            </svg>
+          </a>
           {view === 'dashboard' && (
             <button
               id="btn-toggle-add-form"
@@ -438,6 +411,24 @@ function App() {
                 })}
               </div>
             )}
+            
+            <div className="donation-card">
+              <div className="donation-card-content">
+                <span style={{ fontSize: '20px', flexShrink: 0 }}>☕</span>
+                <div>
+                  <div className="donation-card-title">Enjoying Boner Mohis?</div>
+                  <div className="donation-card-subtitle">Support the maintainer & open-source work</div>
+                </div>
+              </div>
+              <a
+                href="https://asifiqbal.rocks/donation?utm_source=boner_mohis&utm_medium=chrome_extension&utm_campaign=popup&ref=boner-mohis-chrome-extension"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-donation"
+              >
+                Donate ☕
+              </a>
+            </div>
           </section>
         )}
 
@@ -466,52 +457,53 @@ function App() {
               )}
 
               <div className="detail-layout-container">
+                {/* Full-width Account Identity Header */}
+                <div className="card-header full-width-account-header">
+                  <div className="account-meta-with-back" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btn-back" onClick={goBack} title="Back to Dashboard" aria-label="Back to Dashboard">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6" />
+                      </svg>
+                    </button>
+                    <div className="account-meta">
+                      <span className="nickname-title">{activeAccount.nickname}</span>
+                      <span className="account-no-label">A/C &middot; {activeAccount.accountNo} &middot; {activeAccount.distributor.toUpperCase()}</span>
+                    </div>
+                  </div>
+                  <div className="account-actions" style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className={`btn-icon${isSyncing ? ' spinning' : ''}`}
+                      title="Sync account"
+                      onClick={() => handleSync()}
+                      disabled={isSyncing}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.61L21 8" />
+                        <polyline points="21 3 21 8 16 8" />
+                      </svg>
+                    </button>
+                    <button
+                      className="btn-icon btn-icon-danger"
+                      title="Delete account"
+                      onClick={handleDelete}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Row #1: Split main details & slab visualizer */}
                 <div className="detail-row-one">
                   {/* Row #1 Left Col: Remaining Balance & 3 cards in a row */}
                   <div className="detail-row-one-left">
-                    {/* Account identity header */}
-                    <div className="card-header">
-                      <div className="account-meta-with-back" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button className="btn-back" onClick={goBack} title="Back to Dashboard" aria-label="Back to Dashboard">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="15 18 9 12 15 6" />
-                          </svg>
-                        </button>
-                        <div className="account-meta">
-                          <span className="nickname-title">{activeAccount.nickname}</span>
-                          <span className="account-no-label">A/C &middot; {activeAccount.accountNo} &middot; {activeAccount.distributor.toUpperCase()}</span>
-                        </div>
-                      </div>
-                      <div className="account-actions" style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          className={`btn-icon${isSyncing ? ' spinning' : ''}`}
-                          title="Sync account"
-                          onClick={() => handleSync()}
-                          disabled={isSyncing}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.61L21 8" />
-                            <polyline points="21 3 21 8 16 8" />
-                          </svg>
-                        </button>
-                        <button
-                          className="btn-icon btn-icon-danger"
-                          title="Delete account"
-                          onClick={handleDelete}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14H6L5 6" />
-                            <path d="M10 11v6M14 11v6" />
-                            <path d="M9 6V4h6v2" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
                     {/* Balance */}
                     <div className="balance-container">
                       <div className="balance-main">
@@ -699,7 +691,7 @@ function App() {
                           <span className="history-date">No usage logs recorded yet.</span>
                         </div>
                       ) : (
-                        history.slice(0, 10).map((item, idx) => (
+                        history.slice(0, 30).map((item, idx) => (
                           <div key={idx} className="history-row">
                             <span className="history-date">{formatDate(item.date)}</span>
                             <div className="history-metrics">
@@ -715,73 +707,48 @@ function App() {
                   </section>
                 </div>
 
-                {/* Row #4: Simulator / Live Operations */}
+                {/* Row #4: Live API Operations */}
                 <div className="detail-row-simulator">
                   <div className="simulator-card glass-item">
-                    <h3 className="section-title">
-                      {activeAccount.distributor === 'desco' ? 'LIVE API OPERATIONS' : 'SIMULATOR CONTROLS'}
-                    </h3>
-                    {activeAccount.distributor === 'desco' ? (
-                      <div className="sim-action-row">
-                        <button
-                          className={`btn-sim-primary${isSyncing ? ' spinning' : ''}`}
-                          onClick={() => handleSync()}
-                          disabled={isSyncing}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                            style={{ width: 14, height: 14 }}>
-                            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.61L21 8" />
-                            <polyline points="21 3 21 8 16 8" />
-                          </svg>
-                          {isSyncing ? 'Syncing…' : 'Sync Live'}
-                        </button>
-                        {syncError && (
-                          <p className="sim-error-text">{syncError}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <div className="sim-action-row">
-                          <button
-                            className={`btn-sim-primary${isSimulating ? ' spinning' : ''}`}
-                            onClick={handleSimulate}
-                            disabled={isSimulating}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                              style={{ width: 14, height: 14 }}>
-                              <polygon points="5 3 19 12 5 21 5 3" />
-                            </svg>
-                            {isSimulating ? 'Simulating…' : 'Simulate 24H'}
-                          </button>
-                          <button className="btn-sim-secondary" onClick={handleResetCycle}>
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                              style={{ width: 14, height: 14 }}>
-                              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.61L21 8" />
-                              <polyline points="21 3 21 8 16 8" />
-                            </svg>
-                            Reset Cycle
-                          </button>
-                        </div>
-                        <div className="top-up-form">
-                          <div className="input-group">
-                            <span className="input-prefix">৳</span>
-                            <input
-                              type="number"
-                              placeholder="Top-up amount"
-                              min="1"
-                              value={topUpAmount}
-                              onChange={(e) => setTopUpAmount(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleTopUp()}
-                            />
-                            <button className="btn-accent" onClick={handleTopUp}>Top Up</button>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    <h3 className="section-title">LIVE API OPERATIONS</h3>
+                    <div className="sim-action-row">
+                      <button
+                        className={`btn-sim-primary${isSyncing ? ' spinning' : ''}`}
+                        onClick={() => handleSync()}
+                        disabled={isSyncing}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                          style={{ width: 14, height: 14 }}>
+                          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.61L21 8" />
+                          <polyline points="21 3 21 8 16 8" />
+                        </svg>
+                        {isSyncing ? 'Syncing…' : 'Sync Live'}
+                      </button>
+                      {syncError && (
+                        <p className="sim-error-text">{syncError}</p>
+                      )}
+                    </div>
                   </div>
+                </div>
+
+                {/* Bottom Donation Card */}
+                <div className="donation-card">
+                  <div className="donation-card-content">
+                    <span style={{ fontSize: '20px', flexShrink: 0 }}>☕</span>
+                    <div>
+                      <div className="donation-card-title">Enjoying Boner Mohis?</div>
+                      <div className="donation-card-subtitle">Support the maintainer & open-source work</div>
+                    </div>
+                  </div>
+                  <a
+                    href="https://asifiqbal.rocks/donation?utm_source=boner_mohis&utm_medium=chrome_extension&utm_campaign=popup&ref=boner-mohis-chrome-extension"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-donation"
+                  >
+                    Donate ☕
+                  </a>
                 </div>
               </div>
             </div>
@@ -793,7 +760,7 @@ function App() {
           <div className="modal-overlay">
             <div className="modal-card glass-panel">
               <div className="modal-header">
-                <h3>Add electricity account</h3>
+                <h3>Add DESCO account</h3>
                 <button
                   className="btn-close-icon"
                   onClick={() => setShowAddModal(false)}
@@ -813,18 +780,6 @@ function App() {
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                   />
-                </div>
-
-                <div className="form-group">
-                  <label>Distributor provider</label>
-                  <select
-                    className="glass-select"
-                    required
-                    value={provider}
-                    onChange={(e) => setProvider(e.target.value)}
-                  >
-                    <option value="desco">DESCO (Dhaka Electric)</option>
-                  </select>
                 </div>
 
                 <div className="form-row">
@@ -851,33 +806,6 @@ function App() {
                     />
                   </div>
                 </div>
-
-                {provider !== 'desco' && (
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Initial balance (৳)</label>
-                      <input
-                        type="number"
-                        placeholder="1500"
-                        min="0"
-                        required={provider !== 'desco'}
-                        value={balance}
-                        onChange={(e) => setBalance(e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Current month usage (kWh)</label>
-                      <input
-                        type="number"
-                        placeholder="100"
-                        min="0"
-                        required={provider !== 'desco'}
-                        value={monthlyKwh}
-                        onChange={(e) => setMonthlyKwh(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <button type="submit" className="btn-submit">Add account</button>
               </form>

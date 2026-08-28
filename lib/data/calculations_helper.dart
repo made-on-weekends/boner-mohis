@@ -7,33 +7,20 @@ class CalculationsHelper {
   CalculationsHelper._();
 
   static const Map<String, DistributorConfig> distributors = {
-    'default': DistributorConfig(
-      name: 'Standard Progressive Utility',
-      currency: '৳',
-      slabs: [
-        Slab(50.0, 4.63),
-        Slab(75.0, 5.26),
-        Slab(200.0, 8.50),
-        Slab(300.0, 9.10),
-        Slab(400.0, 9.62),
-        Slab(600.0, 15.01),
-        Slab(double.infinity, 17.35),
-      ],
-    ),
-    'dpdc': DistributorConfig(
-      name: 'DPDC (Dhaka Power)',
-      currency: '৳',
-      slabs: [
-        Slab(50.0, 4.63),
-        Slab(75.0, 5.26),
-        Slab(200.0, 8.50),
-        Slab(300.0, 9.10),
-        Slab(400.0, 9.62),
-        Slab(600.0, 15.01),
-        Slab(double.infinity, 17.35),
-      ],
-    ),
     'desco': DistributorConfig(
+      name: 'DESCO (Dhaka Electric)',
+      currency: '৳',
+      slabs: [
+        Slab(50.0, 4.63),
+        Slab(75.0, 5.26),
+        Slab(200.0, 8.50),
+        Slab(300.0, 9.10),
+        Slab(400.0, 9.62),
+        Slab(600.0, 15.01),
+        Slab(double.infinity, 17.35),
+      ],
+    ),
+    'default': DistributorConfig(
       name: 'DESCO (Dhaka Electric)',
       currency: '৳',
       slabs: [

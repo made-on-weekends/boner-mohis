@@ -3,33 +3,20 @@
  */
 
 export const DISTRIBUTORS = {
-  "default": {
-    name: "Standard Progressive Utility",
-    currency: "৳",
-    slabs: [
-      { limit: 50, rate: 4.63 },
-      { limit: 75, rate: 5.26 },
-      { limit: 200, rate: 8.50 },
-      { limit: 300, rate: 9.10 },
-      { limit: 400, rate: 9.62 },
-      { limit: 600, rate: 15.01 },
-      { limit: Infinity, rate: 17.35 }
-    ]
-  },
-  "dpdc": {
-    name: "DPDC (Dhaka Power)",
-    currency: "৳",
-    slabs: [
-      { limit: 50, rate: 4.63 },
-      { limit: 75, rate: 5.26 },
-      { limit: 200, rate: 8.50 },
-      { limit: 300, rate: 9.10 },
-      { limit: 400, rate: 9.62 },
-      { limit: 600, rate: 15.01 },
-      { limit: Infinity, rate: 17.35 }
-    ]
-  },
   "desco": {
+    name: "DESCO (Dhaka Electric)",
+    currency: "৳",
+    slabs: [
+      { limit: 50, rate: 4.63 },
+      { limit: 75, rate: 5.26 },
+      { limit: 200, rate: 8.50 },
+      { limit: 300, rate: 9.10 },
+      { limit: 400, rate: 9.62 },
+      { limit: 600, rate: 15.01 },
+      { limit: Infinity, rate: 17.35 }
+    ]
+  },
+  "default": {
     name: "DESCO (Dhaka Electric)",
     currency: "৳",
     slabs: [

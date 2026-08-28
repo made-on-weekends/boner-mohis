@@ -39,6 +39,9 @@ dependencies:
   # Date/number formatting
   intl: ^0.19.0
 
+  # URL launching for support & donation links
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

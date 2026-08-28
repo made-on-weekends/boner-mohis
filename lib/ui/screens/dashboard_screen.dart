@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/providers.dart';
 import '../../data/calculations_helper.dart';
 import '../theme/filament_theme.dart';
 import '../widgets/account_card.dart';
 import 'detail_screen.dart';
 import 'add_account_screen.dart';
+
+Future<void> _launchDonationUrl() async {
+  final uri = Uri.parse(
+    'https://asifiqbal.rocks/donation?utm_source=boner_mohis&utm_medium=android_app&utm_campaign=app_ui&ref=boner-mohis-android',
+  );
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -31,7 +41,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final textPrimary =
         isDark ? FilamentColors.textPrimaryDark : FilamentColors.textPrimary;
 
-
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -55,6 +64,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
         actions: [
+          const IconButton(
+            icon: Icon(Icons.coffee_outlined),
+            color: FilamentColors.emberOrange,
+            tooltip: 'Support maintainer',
+            onPressed: _launchDonationUrl,
+          ),
           accountsAsync.when(
             data: (accounts) => accounts.isNotEmpty
                 ? IconButton(
@@ -85,21 +100,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           }
 
           final sorted = [...accounts]..sort((a, b) {
+              final aLow = a.balance <= 0;
+              final bLow = b.balance <= 0;
+              if (aLow && !bLow) return -1;
+              if (!aLow && bLow) return 1;
               final dA = CalculationsHelper.calculateDaysRemaining(
                   a.balance, a.yesterdayUsage);
               final dB = CalculationsHelper.calculateDaysRemaining(
                   b.balance, b.yesterdayUsage);
               if (dA == dB) return 0;
-              if (dA == double.infinity) return 1;
-              if (dB == double.infinity) return -1;
+              if (dA.isNaN || dA == double.infinity) return 1;
+              if (dB.isNaN || dB == double.infinity) return -1;
               return dA.compareTo(dB);
             });
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: sorted.length,
+            itemCount: sorted.length + 1,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
+              if (index == sorted.length) {
+                return const _DonationCard(onTap: _launchDonationUrl);
+              }
               final account = sorted[index];
               return AccountCard(
                 account: account,
@@ -175,8 +197,100 @@ class _EmptyState extends StatelessWidget {
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Add first account'),
             ),
+            const SizedBox(height: 20),
+            TextButton.icon(
+              onPressed: _launchDonationUrl,
+              icon: const Icon(Icons.coffee_outlined, size: 16),
+              label: const Text('Support the maintainer'),
+              style: TextButton.styleFrom(
+                foregroundColor: FilamentColors.emberOrange,
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DonationCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _DonationCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textMuted =
+        isDark ? FilamentColors.textMutedDark : FilamentColors.textMuted;
+    final cardBg =
+        isDark ? FilamentColors.darkCard : FilamentColors.cardBgLight;
+    final border =
+        isDark ? FilamentColors.darkBorder : FilamentColors.borderLight;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: FilamentColors.emberOrange.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.coffee_outlined,
+              color: FilamentColors.emberOrange,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enjoying Boner Mohis?',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  'Support the maintainer & open-source work',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 12,
+                    color: textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          OutlinedButton(
+            onPressed: onTap,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              side: const BorderSide(color: FilamentColors.emberOrange),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Donate ☕',
+              style: GoogleFonts.dmSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: FilamentColors.emberOrange,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

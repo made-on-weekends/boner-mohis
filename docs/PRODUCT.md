@@ -25,8 +25,7 @@ Providing an immediate, visually elegant warning of when a local prepaid account
   - Monthly usage tracker.
   - Current billing slab tier (with a progress gauge indicating how much of the slab is consumed).
   - Forecast of "days remaining" computed from yesterday's consumption.
-- **Visual Alert System:** Highlight low-balance accounts (runs out in <= 2 days based on yesterday's usage).
-- **Simulation Layer:** An interactive mock-adapter simulator allowing developers and users to trigger simulated meter consumption, usage spikes, and top-ups, demonstrating calculations dynamically.
+- **Live API Integration:** Direct integration with official DESCO API (`getBalance` and `getCustomerDailyConsumption`) for live balance and historical consumption tracking.
 - **Android Local Alerts:** Local background tasks (`WorkManager`) checking DB status and scheduling local push notifications when accounts are projected to expire in under 2 days.
 
 ## Explicitly out of scope
@@ -34,7 +33,7 @@ Providing an immediate, visually elegant warning of when a local prepaid account
 - **Centralized Cloud Database:** No database server. All data remains inside the user's browser storage or mobile storage.
 - **Device-to-Device Sync:** No automatic sync. All settings and meter accounts are device-local.
 - **Billing Payments Integration:** No payments processing or online top-ups.
-- **Commercial Scrapers for All Providers:** Due to captcha/verification restrictions on utility portals, we do not build default production scrapers, but instead use a flexible mock simulator adapter.
+- **Other Electricity Providers:** Focused solely on DESCO prepaid meters.
 
 ## Phase plan
 

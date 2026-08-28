@@ -26,7 +26,7 @@
 
 **Do:**
 - Always write type-safe data schemas (validate JSON items at the storage boundary).
-- Keep historical usage data compact: limit historical logs to 60 days of daily usage to avoid storage inflation.
+- Keep historical usage data compact: limit historical logs to 30 days (1 month) of daily usage to avoid storage inflation.
 - Always use Room transactions in Android when writing to multiple tables.
 - Use explicit keys for storage partitions (`accounts`, `simulation_settings`).
 

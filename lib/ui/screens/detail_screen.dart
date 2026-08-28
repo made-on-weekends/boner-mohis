@@ -22,7 +22,6 @@ class DetailScreen extends ConsumerStatefulWidget {
 class _DetailScreenState extends ConsumerState<DetailScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _syncRotation;
-  final _topUpController = TextEditingController();
   bool _showDismissedAlert = false;
 
   @override
@@ -43,41 +42,24 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
   @override
   void dispose() {
     _syncRotation.dispose();
-    _topUpController.dispose();
     super.dispose();
   }
 
   Future<void> _triggerSync() async {
-    if (!mounted) return;
+    final id = ref.read(selectedAccountIdProvider);
+    if (id == null) return;
     ref.read(syncLoadingProvider.notifier).state = true;
     ref.read(syncErrorProvider.notifier).state = null;
     _syncRotation.repeat();
-    final id = ref.read(selectedAccountIdProvider);
-    if (id == null) return;
+
     final error = await ref.read(repositoryProvider).syncAccount(id);
+
     if (!mounted) return;
-    _syncRotation.stop();
     _syncRotation.reset();
     ref.read(syncLoadingProvider.notifier).state = false;
     if (error != null) {
       ref.read(syncErrorProvider.notifier).state = error;
     }
-  }
-
-  Future<void> _simulateDay() async {
-    final id = ref.read(selectedAccountIdProvider);
-    if (id == null) return;
-    await ref.read(repositoryProvider).simulateDay(id);
-  }
-
-  Future<void> _topUp() async {
-    final amount = double.tryParse(_topUpController.text);
-    if (amount == null || amount <= 0) return;
-    final id = ref.read(selectedAccountIdProvider);
-    if (id == null) return;
-    await ref.read(repositoryProvider).topUp(id, amount);
-    _topUpController.clear();
-    if (mounted) FocusScope.of(context).unfocus();
   }
 
   Future<void> _confirmDelete() async {
@@ -148,7 +130,6 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
     final borderColor =
         isDark ? FilamentColors.darkBorder : FilamentColors.borderLight;
 
-    final isSimulation = account.distributor != 'desco';
     final dateStr = DateFormat('d MMM yyyy, HH:mm').format(
         DateTime.fromMillisecondsSinceEpoch(account.lastUpdated));
 
@@ -178,18 +159,17 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
       appBar: AppBar(
         title: Text(account.nickname),
         actions: [
-          if (!isSimulation)
-            RotationTransition(
-              turns: _syncRotation,
-              child: IconButton(
-                icon: const Icon(Icons.sync),
-                color: syncLoading
-                    ? FilamentColors.emberText(isDark)
-                    : textMuted,
-                tooltip: 'Sync live data',
-                onPressed: syncLoading ? null : _triggerSync,
-              ),
+          RotationTransition(
+            turns: _syncRotation,
+            child: IconButton(
+              icon: const Icon(Icons.sync),
+              color: syncLoading
+                  ? FilamentColors.emberText(isDark)
+                  : textMuted,
+              tooltip: 'Sync Live',
+              onPressed: syncLoading ? null : _triggerSync,
             ),
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             color: FilamentColors.dangerText(isDark),
@@ -592,15 +572,13 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
             ),
             const SizedBox(height: 12),
 
-            // ── Simulator / Live Operations ──────────────────────────────
+            // ── Live Operations ──────────────────────────────────────────
             _SectionCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isSimulation
-                        ? 'Simulator Controls'
-                        : 'Live API Operations',
+                    'Live API Operations',
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -608,67 +586,18 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (!isSimulation) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: syncLoading ? null : _triggerSync,
-                        icon: Icon(
-                          Icons.sync,
-                          size: 16,
-                          color: syncLoading ? textMuted : Colors.white,
-                        ),
-                        label: Text(syncLoading ? 'Syncing…' : 'Sync Live'),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: syncLoading ? null : _triggerSync,
+                      icon: Icon(
+                        Icons.sync,
+                        size: 16,
+                        color: syncLoading ? textMuted : Colors.white,
                       ),
+                      label: Text(syncLoading ? 'Syncing…' : 'Sync Live'),
                     ),
-                  ] else ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _simulateDay,
-                            icon: const Icon(Icons.fast_forward, size: 16),
-                            label: const Text('Simulate 24H'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () async {
-                              final id = ref.read(selectedAccountIdProvider);
-                              if (id != null) {
-                                await ref
-                                    .read(repositoryProvider)
-                                    .resetCycle(id);
-                              }
-                            },
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Reset Cycle'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _topUpController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Top-up amount',
-                              prefixText: '৳ ',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: _topUp,
-                          child: const Text('Top Up'),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ],
               ),
             ),
@@ -708,14 +637,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
   }
 
   String _distributorName(String key) {
-    switch (key) {
-      case 'desco':
-        return 'DESCO (Dhaka Electric)';
-      case 'dpdc':
-        return 'DPDC (Dhaka Power)';
-      default:
-        return 'Standard Progressive';
-    }
+    return 'DESCO (Dhaka Electric)';
   }
 }
 

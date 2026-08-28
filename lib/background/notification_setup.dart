@@ -32,12 +32,12 @@ Future<void> setupNotifications() async {
       dispatcherCallbackDispatcher,
     );
 
-    // Register 1-hourly task for API retries and 6-hourly low-balance notification checks
+    // Register 1-hourly task for API retries, daily updates, and low-balance checks
     await Workmanager().registerPeriodicTask(
       _taskName,
       _taskName,
       frequency: const Duration(hours: 1),
-      constraints: Constraints(networkType: NetworkType.connected),
+      constraints: Constraints(),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
   } catch (_) {
@@ -56,6 +56,13 @@ Future<void> _ensureNotificationsInitialized() async {
       _notifications.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
   await android?.requestNotificationsPermission();
+  const channel = AndroidNotificationChannel(
+    _channelId,
+    _channelName,
+    description: _channelDesc,
+    importance: Importance.high,
+  );
+  await android?.createNotificationChannel(channel);
   _notificationsInitialized = true;
 }
 
@@ -158,9 +165,8 @@ Future<void> checkAndNotifyForAccount({
   required double balance,
   required double yesterdayUsage,
 }) async {
-  if (yesterdayUsage <= 0) return;
-  final days = balance / yesterdayUsage;
-  if (days <= kLowBalanceThresholdDays) {
+  final days = yesterdayUsage > 0 ? balance / yesterdayUsage : double.infinity;
+  if (balance <= 0 || (yesterdayUsage > 0 && days <= kLowBalanceThresholdDays)) {
     await sendLowBalanceNotification(
       id: id,
       nickname: nickname,
@@ -293,35 +299,29 @@ Future<void> _runBalanceCheck() async {
         }
       }
 
-      // 1. If fresh API balance sync succeeded, push balance notification immediately
-      if (freshSyncSucceeded) {
-        await sendSyncedBalanceNotification(
-          id: id,
-          nickname: nickname,
-          balance: balance,
-        );
+      final days = yesterdayUsage > 0 ? balance / yesterdayUsage : double.nan;
+
+      // 1. Daily notification check (once every 24 hours)
+      if ((nowMs - lastDaily) >= kTwentyFourHoursMs) {
+        if (freshSyncSucceeded) {
+          await sendSyncedBalanceNotification(
+            id: id,
+            nickname: nickname,
+            balance: balance,
+          );
+        } else {
+          await sendDailyBalanceNotification(
+            id: id,
+            nickname: nickname,
+            daysRemaining: days,
+            balance: balance,
+          );
+        }
         lastDaily = nowMs;
       }
 
-      if (yesterdayUsage <= 0) {
-        // Save updated timestamps
-        await db.insert(
-          'notification_tracker',
-          {
-            'account_id': id,
-            'last_api_sync_success_epoch': lastApiSyncSuccess,
-            'last_daily_notify_epoch': lastDaily,
-            'last_low_balance_notify_epoch': lastLow,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-        continue;
-      }
-
-      final days = balance / yesterdayUsage;
-
       // 2. Low balance notification check every 6 hours (using stored DB balance)
-      if (days <= kLowBalanceThresholdDays) {
+      if (balance <= 0 || (yesterdayUsage > 0 && days <= kLowBalanceThresholdDays)) {
         if ((nowMs - lastLow) >= kSixHoursMs) {
           await sendLowBalanceNotification(
             id: id,

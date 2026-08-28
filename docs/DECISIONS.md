@@ -66,3 +66,15 @@
 **Decision:** Change manifest name, app labels, and headers back to "Boner Mohis" while preserving all the new Filament Style System design components, colors, and typography layouts.
 **Consequences:** The application retains its classic naming "Boner Mohis" with the subtitle "Electricity forecaster" on both platforms, while keeping the visual layout updates.
 
+---
+
+## 0005 — Add url_launcher and Maintainer Donation Links
+
+**Date:** 2026-08-28
+**Status:** Accepted
+**Context:** We need to support opening external maintainer support and donation links from within both the Android companion app and Chrome Extension UI.
+**Decision:**
+1. Add `url_launcher` package to Flutter `pubspec.yaml` to allow opening external donation URLs.
+2. Add Maintainer Donation / Support links with project-specific UTM tracking parameters to both the Chrome Extension UI and Android companion app UI.
+**Consequences:** Users can click the support/donation button in the app bar/header or dashboard banner to open the maintainer donation page.
+

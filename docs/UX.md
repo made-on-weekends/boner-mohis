@@ -9,9 +9,9 @@
 - **Trigger**: Click the "+" button in the header (if accounts exist) or click the "Add first account" button on the empty dashboard state.
 - **Interactions**:
   - Modal overlay appears containing the account form.
-  - User fills in Nickname, Provider (DESCO, DPDC, Standard Progressive), Account Number, Meter Number, and optional starting balance parameters.
+  - User fills in Nickname, Account Number, and Meter Number (DESCO).
   - Submit checks input validations (Account Number and Meter Number must contain digits only).
-  - On success, the modal closes and the newly created account's detail view is loaded.
+  - On success, the modal closes, the account is created, and live sync is immediately initiated.
 
 ### 2. Dashboard Navigation
 - **Interactions**:
@@ -19,16 +19,11 @@
   - Tap/click any account card to slide/navigate into the **Detail View**.
   - Tap/click the Back Arrow (`<`) in the header of the Detail View to return to the Dashboard.
 
-### 3. Live Synchronisation (DESCO Only)
+### 3. Live Synchronisation (DESCO)
 - **Interactions**:
-  - Upon entering the Detail View for a DESCO account, the application automatically triggers `syncAccount` to fetch live data.
+  - Upon entering the Detail View for a DESCO account, the application automatically triggers `syncAccount` to fetch live balance and historical consumption from the official DESCO prepaid API.
   - Clicking the rotating "Sync Live" button triggers a manual update.
   - The sync button rotates/spins during the operation. If it fails, an inline error banner displays the message at the top of the card.
-
-### 4. Interactive Simulation (Mock Accounts Only)
-- **Interactions**:
-  - In simulation mode, the user can click "Simulate 24H". The application advances time by one day, simulates randomized consumption, updates history, and subtracts the progressive cost from the balance.
-  - Users can input a currency amount in the Top Up field and click "Top Up" to instantly increase the balance.
 
 ## Always / Never (behavior rules)
 

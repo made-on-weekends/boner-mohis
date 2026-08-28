@@ -69,16 +69,14 @@ Returns which slab the current usage falls into, plus:
 
 ## Distributor Mapping
 
-All three current distributor keys share the same slab configuration:
+Currently supported distributor:
 
 | Key       | Name                    |
 |-----------|-------------------------|
 | `desco`   | DESCO (Dhaka Electric)  |
-| `dpdc`    | DPDC (Dhaka Power)      |
-| `default` | Standard Progressive    |
 
-If a future distributor uses a different rate schedule, add a new key to `DISTRIBUTORS` in both:
-- [`CalculationsHelper.kt`](../android/app/src/main/java/com/example/bonermohis/data/CalculationsHelper.kt)
+Rates configured in:
+- [`calculations_helper.dart`](../lib/data/calculations_helper.dart)
 - [`calculations.js`](../extension-react/src/calculations.js)
 
 ---

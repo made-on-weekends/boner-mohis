@@ -1,4 +1,4 @@
-import { calculateCost, getSlabDetails, DISTRIBUTORS } from './calculations.js';
+import { getSlabDetails, DISTRIBUTORS } from './calculations.js';
 import { db } from './storage.js';
 
 /**
@@ -36,106 +36,7 @@ async function extensionFetch(url) {
  */
 export const providers = {
   /**
-   * Triggers a simulated 24-hour cycle for a specific account.
-   * Generates realistic consumption, calculates costs based on slabs,
-   * deducts from prepaid balance, and updates historical databases.
-   * 
-   * @param {string} accountId 
-   * @param {number} customKwh - Optional fixed consumption to simulate
-   * @returns {Promise<object>} The updated account object
-   */
-  simulateDay: async (accountId, customKwh = null) => {
-    const accounts = await db.getAccounts();
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) throw new Error("Account not found");
-
-    // 1. Generate daily consumption (random 4 to 12 kWh if not specified)
-    const kwhUsed = customKwh !== null 
-      ? Number(customKwh) 
-      : Number((4 + Math.random() * 8).toFixed(2));
-
-    // 2. Add to monthly total usage
-    const oldMonthlyKwh = account.monthlyKwh || 0;
-    const newMonthlyKwh = Number((oldMonthlyKwh + kwhUsed).toFixed(2));
-
-    // 3. Compute cost for today based on progressive slabs.
-    // Cost today is: Cost of total new monthly usage - Cost of old monthly usage.
-    // This accurately simulates progressive billing slab transitions during the month.
-    const costOfNewTotal = calculateCost(newMonthlyKwh, account.distributor);
-    const costOfOldTotal = calculateCost(oldMonthlyKwh, account.distributor);
-    const dailyCost = Number(Math.max(0, costOfNewTotal - costOfOldTotal).toFixed(2));
-
-    // 4. Deduct cost from remaining balance
-    const newBalance = Number(Math.max(0, account.balance - dailyCost).toFixed(2));
-
-    // 5. Determine active slab tier stats
-    const slabStats = getSlabDetails(newMonthlyKwh, account.distributor);
-
-    // 6. Write daily history record
-    const todayStr = new Date().toISOString().split('T')[0];
-    await db.addHistoryRecord(accountId, todayStr, kwhUsed, dailyCost);
-
-    // 7. Update account metrics
-    const updatedAccount = {
-      ...account,
-      balance: newBalance,
-      monthlyKwh: newMonthlyKwh,
-      yesterdayUsage: dailyCost, // Yesterday's usage in currency
-      currentSlab: slabStats.index,
-      slabUsage: Number((newMonthlyKwh - slabStats.slabMin).toFixed(2)),
-      lastUpdated: new Date().toISOString()
-    };
-
-    await db.saveAccount(updatedAccount);
-    return updatedAccount;
-  },
-
-  /**
-   * Refills the prepaid account balance
-   * @param {string} accountId 
-   * @param {number} amount - Amount to add to prepaid balance
-   * @returns {Promise<object>} The updated account object
-   */
-  topUpBalance: async (accountId, amount) => {
-    const accounts = await db.getAccounts();
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) throw new Error("Account not found");
-
-    const newBalance = Number((account.balance + Number(amount)).toFixed(2));
-    const updatedAccount = {
-      ...account,
-      balance: newBalance,
-      lastUpdated: new Date().toISOString()
-    };
-
-    await db.saveAccount(updatedAccount);
-    return updatedAccount;
-  },
-
-  /**
-   * Resets monthly totals (simulates billing cycle rollover)
-   * @param {string} accountId 
-   * @returns {Promise<object>} The updated account object
-   */
-  resetBillingCycle: async (accountId) => {
-    const accounts = await db.getAccounts();
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) throw new Error("Account not found");
-
-    const updatedAccount = {
-      ...account,
-      monthlyKwh: 0,
-      currentSlab: 0,
-      slabUsage: 0,
-      lastUpdated: new Date().toISOString()
-    };
-
-    await db.saveAccount(updatedAccount);
-    return updatedAccount;
-  },
-
-  /**
-   * Syncs account details with the live distributor API if supported (e.g. DESCO)
+   * Syncs account details with the live distributor API (DESCO)
    * @param {string} accountId 
    * @returns {Promise<object>} The updated account object
    */
@@ -162,26 +63,15 @@ export const providers = {
       const liveMonthlyKwh = isTestAccount ? 124.01  : (account.monthlyKwh  || 85.40);
       const yesterdayCost  = isTestAccount ? 223.04  : (account.yesterdayUsage || 28.50);
 
-      const todayStr = new Date().toISOString().split('T')[0];
-      const prev1 = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const prev2 = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const prev3 = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      if (isTestAccount) {
-        // Daily deltas from HAR cumulative data (kWh, BDT):
-        //   Jul 04: 22685.895-22659.655=26.24 kWh, 628.50-405.46=223.04 BDT
-        //   Jul 03: 22659.655-22635.141=24.51 kWh, 405.46-272.36=133.10 BDT
-        //   Jul 02: 22635.141-22609.583=25.56 kWh, 272.36-121.39=150.97 BDT
-        //   Jul 01: reset month, consumedTaka 121.39 BDT, 22609.583-22583.369=26.21 kWh
-        await db.addHistoryRecord(accountId, todayStr, 26.24, 223.04);
-        await db.addHistoryRecord(accountId, prev1,    24.51, 133.10);
-        await db.addHistoryRecord(accountId, prev2,    25.56, 150.97);
-        await db.addHistoryRecord(accountId, prev3,    26.21, 121.39);
-      } else {
-        await db.addHistoryRecord(accountId, todayStr, 5.2, 28.50);
-        await db.addHistoryRecord(accountId, prev1,    4.8, 26.30);
-        await db.addHistoryRecord(accountId, prev2,    5.0, 27.50);
-        await db.addHistoryRecord(accountId, prev3,    4.9, 26.80);
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const dateStr = d.toISOString().split('T')[0];
+        const baseKwh = isTestAccount ? 25.0 : 5.0;
+        const baseCost = isTestAccount ? 180.0 : 27.5;
+        const kwhVar = Math.sin(i * 0.7) * 2.5 + (i % 3 === 0 ? 3.0 : 0);
+        const kwh = Number(Math.max(3.5, baseKwh + kwhVar).toFixed(1));
+        const cost = Number((kwh * (baseCost / baseKwh)).toFixed(2));
+        await db.addHistoryRecord(accountId, dateStr, kwh, cost);
       }
 
       const slabStats = getSlabDetails(liveMonthlyKwh, 'desco');
@@ -216,11 +106,11 @@ export const providers = {
       // We initialise to 0 here and derive it below from consumedUnit.
       let liveMonthlyKwh = 0;
 
-      // 2. Fetch daily consumption for last 15 days — also via SW proxy
+      // 2. Fetch daily consumption for last 30 days (1 month) — also via SW proxy
       const today = new Date();
       const dateTo = today.toISOString().split('T')[0];
-      const fifteenDaysAgo = new Date(today.getTime() - 15 * 24 * 60 * 60 * 1000);
-      const dateFrom = fifteenDaysAgo.toISOString().split('T')[0];
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const dateFrom = thirtyDaysAgo.toISOString().split('T')[0];
 
       const consResult = await extensionFetch(
         `https://prepaid.desco.org.bd/api/tkdes/customer/getCustomerDailyConsumption?accountNo=${account.accountNo}&meterNo=${realMeterNo}&dateFrom=${dateFrom}&dateTo=${dateTo}`

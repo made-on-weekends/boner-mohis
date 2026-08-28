@@ -40,8 +40,8 @@ const MOCK_ACCOUNTS = [
   {
     id: "acc_main_home",
     nickname: "Main Home",
-    distributor: "dpdc",
-    accountNo: "20948572",
+    distributor: "desco",
+    accountNo: "22056161",
     meterNo: "90082731",
     balance: 1450.00,
     lastUpdated: new Date().toISOString(),
@@ -65,19 +65,23 @@ const MOCK_ACCOUNTS = [
   }
 ];
 
+function generateMockHistory(baseKwh, baseCost) {
+  const list = [];
+  const today = new Date("2026-08-28T12:00:00Z");
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateStr = d.toISOString().split('T')[0];
+    const kwhVar = Math.sin(i * 0.7) * 2.5 + (i % 3 === 0 ? 3.0 : 0);
+    const kwh = Number(Math.max(3.5, baseKwh + kwhVar).toFixed(1));
+    const cost = Number((kwh * (baseCost / baseKwh)).toFixed(2));
+    list.push({ date: dateStr, consumptionKwh: kwh, cost });
+  }
+  return list;
+}
+
 const MOCK_HISTORY = {
-  "acc_main_home": [
-    { date: "2026-07-04", consumptionKwh: 7.2, cost: 48.50 },
-    { date: "2026-07-03", consumptionKwh: 6.8, cost: 45.80 },
-    { date: "2026-07-02", consumptionKwh: 8.5, cost: 57.30 },
-    { date: "2026-07-01", consumptionKwh: 6.0, cost: 40.50 }
-  ],
-  "acc_guest_cottage": [
-    { date: "2026-07-04", consumptionKwh: 6.5, cost: 42.00 },
-    { date: "2026-07-03", consumptionKwh: 6.8, cost: 43.90 },
-    { date: "2026-07-02", consumptionKwh: 5.8, cost: 37.50 },
-    { date: "2026-07-01", consumptionKwh: 7.1, cost: 45.80 }
-  ]
+  "acc_main_home": generateMockHistory(7.0, 48.0),
+  "acc_guest_cottage": generateMockHistory(5.5, 38.0)
 };
 
 export const db = {
@@ -173,10 +177,10 @@ export const db = {
       // Update existing record in place — no duplicate insertion
       history[accountId][existingIdx] = { date, consumptionKwh, cost };
     } else {
-      // Insert at front (most-recent first) and cap at 60 records (DATABASE.md)
+      // Insert at front (most-recent first) and cap at 30 records (1 month of daily logs)
       history[accountId].unshift({ date, consumptionKwh, cost });
-      if (history[accountId].length > 60) {
-        history[accountId] = history[accountId].slice(0, 60);
+      if (history[accountId].length > 30) {
+        history[accountId] = history[accountId].slice(0, 30);
       }
     }
 

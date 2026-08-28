@@ -32,91 +32,6 @@ class ElectricityRepository {
     await accountDao.delete(account);
   }
 
-  Future<void> topUp(int accountId, double amount) async {
-    final account = await accountDao.getById(accountId);
-    if (account == null) return;
-    final updated = account.copyWith(
-      balance: account.balance + amount,
-      lastUpdated: DateTime.now().millisecondsSinceEpoch,
-    );
-    await accountDao.update(updated);
-    // Notify immediately if still low after top-up.
-    await checkAndNotifyForAccount(
-      id: accountId,
-      nickname: updated.nickname,
-      balance: updated.balance,
-      yesterdayUsage: updated.yesterdayUsage,
-    );
-  }
-
-  Future<void> resetCycle(int accountId) async {
-    final account = await accountDao.getById(accountId);
-    if (account == null) return;
-    await accountDao.update(
-      account.copyWith(
-        monthlyKwh: 0.0,
-        currentSlab: 0,
-        slabUsage: 0.0,
-        lastUpdated: DateTime.now().millisecondsSinceEpoch,
-      ),
-    );
-  }
-
-  Future<void> simulateDay(int accountId, {double? customKwh}) async {
-    final account = await accountDao.getById(accountId);
-    if (account == null) return;
-
-    final kwhUsed = customKwh ?? (4.0 + Random().nextDouble() * 8.0);
-
-    final oldMonthlyKwh = account.monthlyKwh;
-    final newMonthlyKwh = oldMonthlyKwh + kwhUsed;
-
-    final costOfNewTotal = CalculationsHelper.calculateCost(
-      newMonthlyKwh,
-      provider: account.distributor,
-    );
-    final costOfOldTotal = CalculationsHelper.calculateCost(
-      oldMonthlyKwh,
-      provider: account.distributor,
-    );
-    final dailyCost = max(0.0, costOfNewTotal - costOfOldTotal);
-
-    final newBalance = max(0.0, account.balance - dailyCost);
-
-    final slabStats = CalculationsHelper.getSlabDetails(
-      newMonthlyKwh,
-      provider: account.distributor,
-    );
-
-    await dailyUsageDao.insert(
-      DailyUsageHistory(
-        accountId: accountId,
-        dateEpoch: DateTime.now().millisecondsSinceEpoch,
-        consumptionKwh: kwhUsed,
-        cost: dailyCost,
-      ),
-    );
-
-    await accountDao.update(
-      account.copyWith(
-        balance: newBalance,
-        monthlyKwh: newMonthlyKwh,
-        yesterdayUsage: dailyCost,
-        currentSlab: slabStats.index,
-        slabUsage: newMonthlyKwh - slabStats.slabMin,
-        lastUpdated: DateTime.now().millisecondsSinceEpoch,
-      ),
-    );
-
-    // Notify immediately if the simulated day pushed balance below threshold.
-    await checkAndNotifyForAccount(
-      id: accountId,
-      nickname: account.nickname,
-      balance: newBalance,
-      yesterdayUsage: dailyCost > 0 ? dailyCost : account.yesterdayUsage,
-    );
-  }
-
   Future<String?> syncAccount(int accountId) async {
     final account = await accountDao.getById(accountId);
     if (account == null) return 'Account not found';
@@ -137,13 +52,13 @@ class ElectricityRepository {
           return balanceObj['desc']?.toString() ?? 'DESCO API error';
         }
         final data = balanceObj['data'] as Map<String, dynamic>;
-        double _numToDouble(dynamic val) {
+        double numToDouble(dynamic val) {
           if (val == null) return 0.0;
           if (val is num) return val.toDouble();
           return double.tryParse(val.toString()) ?? 0.0;
         }
 
-        final liveBalance = _numToDouble(data['balance']);
+        final liveBalance = numToDouble(data['balance']);
 
         final sdf = DateFormat('yyyy-MM-dd');
         final dateTo = sdf.format(DateTime.now());
@@ -187,8 +102,8 @@ class ElectricityRepository {
                 orElse: () => <String, dynamic>{},
               );
               baseUnit = lastOfPrevMonth.isNotEmpty
-                  ? _numToDouble(lastOfPrevMonth['consumedUnit'])
-                  : _numToDouble(
+                  ? numToDouble(lastOfPrevMonth['consumedUnit'])
+                  : numToDouble(
                       list.firstWhere(
                         (e) => (e['date'] as String).startsWith(currentMonthStr),
                         orElse: () => latestEntry,
@@ -197,7 +112,7 @@ class ElectricityRepository {
 
               liveMonthlyKwh = max(
                 0.0,
-                _numToDouble(latestEntry['consumedUnit']) - baseUnit,
+                numToDouble(latestEntry['consumedUnit']) - baseUnit,
               );
               liveMonthlyKwh = (liveMonthlyKwh * 1000).roundToDouble() / 1000.0;
             }
@@ -210,10 +125,10 @@ class ElectricityRepository {
               double dailyCost = 0.0;
 
               if (prev != null) {
-                final curUnit = _numToDouble(current['consumedUnit']);
-                final prevUnit = _numToDouble(prev['consumedUnit']);
-                final curTaka = _numToDouble(current['consumedTaka']);
-                final prevTaka = _numToDouble(prev['consumedTaka']);
+                final curUnit = numToDouble(current['consumedUnit']);
+                final prevUnit = numToDouble(prev['consumedUnit']);
+                final curTaka = numToDouble(current['consumedTaka']);
+                final prevTaka = numToDouble(prev['consumedTaka']);
 
                 dailyKwh = max(0.0, curUnit - prevUnit);
                 final curMonth = (current['date'] as String).split('-')[1];
@@ -227,7 +142,7 @@ class ElectricityRepository {
                 // Fallback: If odometer reading did not update (dailyKwh is 0) but cost was billed,
                 // estimate daily kWh using active slab rate.
                 if (dailyKwh == 0.0 && dailyCost > 5.0) {
-                  final curUnitVal = _numToDouble(current['consumedUnit']);
+                  final curUnitVal = numToDouble(current['consumedUnit']);
                   final monthlyKwhAtDate = curUnitVal > 0.0 ? curUnitVal - baseUnit : liveMonthlyKwh;
                   final slabDetails = CalculationsHelper.getSlabDetails(
                     max(0.0, monthlyKwhAtDate),
@@ -274,11 +189,11 @@ class ElectricityRepository {
               if (lastMonth == secLastMonth) {
                 yesterdayCost = max(
                   0.0,
-                  _numToDouble(last['consumedTaka']) -
-                      _numToDouble(secLast['consumedTaka']),
+                  numToDouble(last['consumedTaka']) -
+                      numToDouble(secLast['consumedTaka']),
                 );
               } else {
-                yesterdayCost = _numToDouble(last['consumedTaka']);
+                yesterdayCost = numToDouble(last['consumedTaka']);
               }
             }
           }
