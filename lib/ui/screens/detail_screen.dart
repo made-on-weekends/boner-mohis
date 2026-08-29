@@ -11,6 +11,7 @@ import '../widgets/charge_bar.dart';
 import '../widgets/low_balance_alert.dart';
 import '../widgets/usage_chart.dart';
 import '../widgets/forecast_breakdown_sheet.dart';
+import '../widgets/donation_card.dart';
 
 class DetailScreen extends ConsumerStatefulWidget {
   const DetailScreen({super.key});
@@ -222,6 +223,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
               LowBalanceAlert(
                 daysRemaining: daysRemaining,
                 balance: account.balance,
+                account: account,
                 onDismiss: () =>
                     setState(() => _showDismissedAlert = true),
               ),
@@ -623,6 +625,8 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            const DonationCard(),
             const SizedBox(height: 32),
           ],
         ),

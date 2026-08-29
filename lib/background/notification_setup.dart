@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart';
+import '../data/database/app_database.dart';
 import '../data/desco_http_client.dart';
 
 const _channelId = 'boner_mohis_low_balance';
@@ -37,8 +38,10 @@ Future<void> setupNotifications() async {
       _taskName,
       _taskName,
       frequency: const Duration(hours: 1),
-      constraints: Constraints(),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      constraints: Constraints(
+        networkType: NetworkType.connected,
+      ),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
   } catch (_) {
     // WorkManager not available (e.g. emulator/desktop) — skip silently.
@@ -167,12 +170,56 @@ Future<void> checkAndNotifyForAccount({
 }) async {
   final days = yesterdayUsage > 0 ? balance / yesterdayUsage : double.infinity;
   if (balance <= 0 || (yesterdayUsage > 0 && days <= kLowBalanceThresholdDays)) {
-    await sendLowBalanceNotification(
-      id: id,
-      nickname: nickname,
-      daysRemaining: days,
-      balance: balance,
-    );
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final db = await _openDb();
+    int lastApiSyncSuccess = 0;
+    int lastDaily = 0;
+    int lastLow = 0;
+
+    if (db != null) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS notification_tracker (
+          account_id INTEGER PRIMARY KEY,
+          last_api_sync_success_epoch INTEGER NOT NULL DEFAULT 0,
+          last_daily_notify_epoch INTEGER NOT NULL DEFAULT 0,
+          last_low_balance_notify_epoch INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      final trackerRows = await db.query(
+        'notification_tracker',
+        where: 'account_id = ?',
+        whereArgs: [id],
+      );
+      if (trackerRows.isNotEmpty) {
+        lastApiSyncSuccess =
+            trackerRows.first['last_api_sync_success_epoch'] as int? ?? 0;
+        lastDaily =
+            trackerRows.first['last_daily_notify_epoch'] as int? ?? 0;
+        lastLow =
+            trackerRows.first['last_low_balance_notify_epoch'] as int? ?? 0;
+      }
+    }
+
+    if ((nowMs - lastLow) >= kSixHoursMs) {
+      await sendLowBalanceNotification(
+        id: id,
+        nickname: nickname,
+        daysRemaining: days,
+        balance: balance,
+      );
+      if (db != null) {
+        await db.insert(
+          'notification_tracker',
+          {
+            'account_id': id,
+            'last_api_sync_success_epoch': lastApiSyncSuccess,
+            'last_daily_notify_epoch': lastDaily,
+            'last_low_balance_notify_epoch': nowMs,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    }
   }
 }
 
@@ -345,18 +392,19 @@ Future<void> _runBalanceCheck() async {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
-
-    await db.close();
   } catch (_) {}
 }
 
 Future<Database?> _openDb() async {
   try {
-    final dir = await getDatabasesPath();
-    // Use p.join so the path is always correct across platforms.
-    return await openDatabase(p.join(dir, 'boner_mohis.db'));
+    return await AppDatabase().database;
   } catch (_) {
-    return null;
+    try {
+      final dir = await getDatabasesPath();
+      return await openDatabase(p.join(dir, 'boner_mohis.db'));
+    } catch (_) {
+      return null;
+    }
   }
 }
 

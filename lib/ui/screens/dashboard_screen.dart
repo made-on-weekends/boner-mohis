@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../data/calculations_helper.dart';
 import '../theme/filament_theme.dart';
 import '../widgets/account_card.dart';
+import '../widgets/donation_card.dart';
 import 'detail_screen.dart';
 import 'add_account_screen.dart';
 
@@ -64,17 +65,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
         actions: [
-          const IconButton(
-            icon: Icon(Icons.coffee_outlined),
-            color: FilamentColors.emberOrange,
-            tooltip: 'Support maintainer',
+          IconButton(
+            icon: const Icon(Icons.coffee_outlined),
+            color: textPrimary,
+            tooltip: 'Support Boner Mohis',
             onPressed: _launchDonationUrl,
           ),
           accountsAsync.when(
             data: (accounts) => accounts.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.add_circle_outline),
-                    color: FilamentColors.emberOrange,
+                    color: textPrimary,
                     tooltip: 'Add account',
                     onPressed: () => _openAddAccount(context),
                   )
@@ -120,7 +121,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               if (index == sorted.length) {
-                return const _DonationCard(onTap: _launchDonationUrl);
+                return const DonationCard(onTap: _launchDonationUrl);
               }
               final account = sorted[index];
               return AccountCard(
@@ -201,7 +202,7 @@ class _EmptyState extends StatelessWidget {
             TextButton.icon(
               onPressed: _launchDonationUrl,
               icon: const Icon(Icons.coffee_outlined, size: 16),
-              label: const Text('Support the maintainer'),
+              label: const Text('Support Boner Mohis'),
               style: TextButton.styleFrom(
                 foregroundColor: FilamentColors.emberOrange,
               ),
@@ -213,88 +214,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _DonationCard extends StatelessWidget {
-  final VoidCallback onTap;
-  const _DonationCard({required this.onTap});
 
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textMuted =
-        isDark ? FilamentColors.textMutedDark : FilamentColors.textMuted;
-    final cardBg =
-        isDark ? FilamentColors.darkCard : FilamentColors.cardBgLight;
-    final border =
-        isDark ? FilamentColors.darkBorder : FilamentColors.borderLight;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: FilamentColors.emberOrange.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.coffee_outlined,
-              color: FilamentColors.emberOrange,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Enjoying Boner Mohis?',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                Text(
-                  'Support the maintainer & open-source work',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 12,
-                    color: textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          OutlinedButton(
-            onPressed: onTap,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              side: const BorderSide(color: FilamentColors.emberOrange),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              'Donate ☕',
-              style: GoogleFonts.dmSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: FilamentColors.emberOrange,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class SparkLineLogoPainter extends CustomPainter {
   final Color strokeColor;

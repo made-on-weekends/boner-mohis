@@ -299,8 +299,8 @@ function App() {
             target="_blank"
             rel="noopener noreferrer"
             className="btn-icon"
-            title="Support the Maintainer (Donate)"
-            style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Support Boner Mohis (Donate)"
+            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none"
               stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -417,7 +417,7 @@ function App() {
                 <span style={{ fontSize: '20px', flexShrink: 0 }}>☕</span>
                 <div>
                   <div className="donation-card-title">Enjoying Boner Mohis?</div>
-                  <div className="donation-card-subtitle">Support the maintainer & open-source work</div>
+                  <div className="donation-card-subtitle">Support Boner Mohis & open-source work</div>
                 </div>
               </div>
               <a
@@ -451,7 +451,7 @@ function App() {
                     <line x1="12" y1="16" x2="12.01" y2="16" />
                   </svg>
                   <span className="alert-text">
-                    Home meter · {remainingUnits} units · ~{activeStats.days} days left at your usual usage (estimate) · as of {new Date(activeAccount.lastUpdated).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase()}, manual entry
+                    {activeAccount.nickname} · {remainingUnits} units · ~{activeStats.days} days left at your usual usage (estimate) · as of {activeAccount.lastUpdated ? new Date(activeAccount.lastUpdated).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase() : 'recently'} · {activeAccount.distributor === 'desco' ? 'synced' : 'manual entry'}
                   </span>
                 </div>
               )}
@@ -738,7 +738,7 @@ function App() {
                     <span style={{ fontSize: '20px', flexShrink: 0 }}>☕</span>
                     <div>
                       <div className="donation-card-title">Enjoying Boner Mohis?</div>
-                      <div className="donation-card-subtitle">Support the maintainer & open-source work</div>
+                      <div className="donation-card-subtitle">Support Boner Mohis & open-source work</div>
                     </div>
                   </div>
                   <a

@@ -52,5 +52,14 @@ void main() {
       expect(isLow(negBal, noUsage), isTrue);
       expect(isLow(500.0, noUsage), isFalse);
     });
+
+    test('6h low balance notification check triggers only when elapsed time is >= 6 hours', () {
+      const nowMs = 1700000000000;
+      const lastLow7hAgo = nowMs - (7 * 60 * 60 * 1000);
+      const lastLow2hAgo = nowMs - (2 * 60 * 60 * 1000);
+
+      expect((nowMs - lastLow7hAgo) >= kSixHoursMs, isTrue);
+      expect((nowMs - lastLow2hAgo) >= kSixHoursMs, isFalse);
+    });
   });
 }

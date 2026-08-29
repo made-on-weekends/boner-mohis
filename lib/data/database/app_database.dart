@@ -9,10 +9,22 @@ class AppDatabase {
   AppDatabase._internal();
 
   Database? _db;
+  Future<Database>? _initFuture;
 
   Future<Database> get database async {
-    _db ??= await _initDb();
-    return _db!;
+    if (_db != null && !_db!.isOpen) {
+      _db = null;
+    }
+    if (_db != null) {
+      return _db!;
+    }
+    _initFuture ??= _initDb();
+    try {
+      _db = await _initFuture!;
+      return _db!;
+    } finally {
+      _initFuture = null;
+    }
   }
 
   Future<Database> _initDb() async {
@@ -56,7 +68,11 @@ class AppDatabase {
   }
 
   Future<void> close() async {
-    await _db?.close();
+    final db = _db;
     _db = null;
+    _initFuture = null;
+    if (db != null && db.isOpen) {
+      await db.close();
+    }
   }
 }

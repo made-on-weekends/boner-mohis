@@ -59,7 +59,12 @@ class AccountDao {
           if (!controller.isClosed) controller.add(current);
         }
       } catch (e, st) {
-        if (!controller.isClosed) controller.addError(e, st);
+        if (!controller.isClosed) {
+          if (e.toString().contains('database_closed')) {
+            return;
+          }
+          controller.addError(e, st);
+        }
       }
     }
 

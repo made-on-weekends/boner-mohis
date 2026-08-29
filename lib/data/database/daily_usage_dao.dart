@@ -38,12 +38,18 @@ class DailyUsageDao {
       {Duration pollInterval = const Duration(seconds: 2)}) async* {
     List<DailyUsageHistory> last = [];
     while (true) {
-      final current = await getHistoryForAccount(accountId);
-      final sig = current.map((h) => '${h.id}:${h.cost}').join(',');
-      final lastSig = last.map((h) => '${h.id}:${h.cost}').join(',');
-      if (sig != lastSig) {
-        last = current;
-        yield current;
+      try {
+        final current = await getHistoryForAccount(accountId);
+        final sig = current.map((h) => '${h.id}:${h.cost}').join(',');
+        final lastSig = last.map((h) => '${h.id}:${h.cost}').join(',');
+        if (sig != lastSig) {
+          last = current;
+          yield current;
+        }
+      } catch (e) {
+        if (!e.toString().contains('database_closed')) {
+          rethrow;
+        }
       }
       await Future<void>.delayed(pollInterval);
     }
