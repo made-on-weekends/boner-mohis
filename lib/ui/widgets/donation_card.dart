@@ -56,7 +56,7 @@ class DonationCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Support Boner Mohis & open-source work',
+                  'Support Boner Mohis development',
                   style: GoogleFonts.dmSans(
                     fontSize: 11,
                     color: textMuted,

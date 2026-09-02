@@ -6,7 +6,7 @@ import { calculateDaysRemaining, getSlabDetails, calculateCost, calculateBreakdo
 // NERC progressive tier-proportional consumption bar.
 // Splits into 6 segments matching Bangladesh progressive tariff ranges (0-50, 50-75, 75-200, 200-300, 300-400, 400-600).
 // Each segment's fill color reveals a portion of the green (0 kWh) to red (600 kWh) gradient.
-function ChargeBar({ monthlyKwh = 0, loading = false }) {
+function ChargeBar({ monthlyKwh = 0, maxKwh = 600, loading = false }) {
   const TIER_RANGES = [
     { min: 0,   max: 50,  weight: 50 / 600 },
     { min: 50,  max: 75,  weight: 25 / 600 },
@@ -34,44 +34,68 @@ function ChargeBar({ monthlyKwh = 0, loading = false }) {
   };
 
   return (
-    <div
-      className="charge-bar"
-      style={{ display: 'flex', gap: '3px', height: '8px', width: '100%', margin: '8px 0' }}
-      title={`${monthlyKwh.toFixed(1)} kWh consumed this month`}
-    >
-      {TIER_RANGES.map((tier, idx) => {
-        const rangeWidth = tier.max - tier.min;
-        const consumed = Math.max(0, Math.min(monthlyKwh - tier.min, rangeWidth));
-        const fillPct = loading ? 0 : (consumed / rangeWidth) * 100;
-        const startColor = getColorForKwh(tier.min);
-        const endColor = getColorForKwh(tier.max);
+    <div className="charge-bar-wrapper" style={{ width: '100%', margin: '4px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>Monthly Usage</span>
+        <span style={{ fontSize: '12px', fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+          {loading ? '-- kWh' : `${monthlyKwh.toFixed(1)} kWh`}
+        </span>
+      </div>
+      <div
+        className="charge-bar"
+        style={{ display: 'flex', gap: '3px', height: '8px', width: '100%' }}
+        title={`${monthlyKwh.toFixed(1)} kWh consumed this month`}
+      >
+        {TIER_RANGES.map((tier, idx) => {
+          const rangeWidth = tier.max - tier.min;
+          const consumed = Math.max(0, Math.min(monthlyKwh - tier.min, rangeWidth));
+          const fillPct = loading ? 0 : (consumed / rangeWidth) * 100;
+          const startColor = getColorForKwh(tier.min);
+          const endColor = getColorForKwh(tier.max);
 
-        return (
-          <div
-            key={idx}
-            className="charge-segment"
-            style={{
-              width: `${tier.weight * 100}%`,
-              height: '100%',
-              borderRadius: '2px',
-              background: 'var(--border-color)',
-              overflow: 'hidden',
-              flexShrink: 0
-            }}
-          >
+          return (
             <div
+              key={idx}
+              className="charge-segment"
               style={{
-                width: `${fillPct}%`,
+                width: `${tier.weight * 100}%`,
                 height: '100%',
-                background: `linear-gradient(to right, ${startColor}, ${endColor})`,
-                transition: 'width 0.3s ease'
+                borderRadius: '2px',
+                background: 'var(--border-color)',
+                overflow: 'hidden',
+                flexShrink: 0
               }}
-            />
-          </div>
-        );
-      })}
+            >
+              <div
+                style={{
+                  width: `${fillPct}%`,
+                  height: '100%',
+                  background: `linear-gradient(to right, ${startColor}, ${endColor})`,
+                  transition: 'width 0.3s ease'
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>0</span>
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>{maxKwh} kWh</span>
+      </div>
     </div>
   );
+}
+
+function getSlabColor(index) {
+  if (index <= 1) return 'var(--state-ok-text)';
+  if (index <= 3) return 'var(--state-low-text)';
+  return 'var(--state-critical-text)';
+}
+
+function getSlabBg(index) {
+  if (index <= 1) return 'rgba(46, 125, 58, 0.1)';
+  if (index <= 3) return 'rgba(178, 84, 9, 0.1)';
+  return 'rgba(194, 42, 33, 0.1)';
 }
 
 
@@ -108,11 +132,46 @@ function App() {
     }
   };
 
-  // Initial load
+  // Initial load: fetch accounts and immediately sync any account with data >= 24 hours old
   useEffect(() => {
     async function loadData() {
       await db.init();
-      await refreshAccounts();
+      const list = await db.getAccounts();
+      setAccounts(list);
+
+      if (list.length === 0) {
+        setSelectedAccountId(null);
+        setHistory([]);
+        setShowAddModal(true);
+        return;
+      }
+
+      const initialTargetId = list[0].id;
+      setSelectedAccountId(initialTargetId);
+      await loadHistory(initialTargetId);
+
+      // Check for stale data (>= 24 hours old) and sync immediately
+      const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const staleAccounts = list.filter(a => {
+        if (a.distributor !== 'desco' || !a.accountNo || !a.meterNo) return false;
+        if (!a.lastUpdated) return true;
+        const lastUpdatedMs = new Date(a.lastUpdated).getTime();
+        return isNaN(lastUpdatedMs) || (now - lastUpdatedMs) >= TWENTY_FOUR_HOURS_MS;
+      });
+
+      if (staleAccounts.length > 0) {
+        setIsSyncing(true);
+        for (const acc of staleAccounts) {
+          try {
+            await providers.syncAccount(acc.id);
+          } catch (err) {
+            console.error(`Immediate 24h stale auto-sync failed for ${acc.nickname}:`, err);
+          }
+        }
+        setIsSyncing(false);
+        await refreshAccounts(initialTargetId);
+      }
     }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -351,7 +410,18 @@ function App() {
               </div>
             ) : (
               <div className="account-cards-grid">
-                {accounts.map(acc => {
+                {[...accounts].sort((a, b) => {
+                  const statsA = getAccountStats(a);
+                  const statsB = getAccountStats(b);
+                  if (statsA.low && !statsB.low) return -1;
+                  if (!statsA.low && statsB.low) return 1;
+                  const dA = statsA.days;
+                  const dB = statsB.days;
+                  if (dA === dB) return 0;
+                  if (dA === Infinity || isNaN(dA)) return 1;
+                  if (dB === Infinity || isNaN(dB)) return -1;
+                  return dA - dB;
+                }).map(acc => {
                   const { days, slab, dist, low } = getAccountStats(acc);
                   return (
                     <button
@@ -383,7 +453,9 @@ function App() {
                       <div className="dashboard-stats-grid">
                         <div className="stat-card">
                           <span className="stat-caption">current tier</span>
-                          <span className="stat-value">{slab.label.split(' (')[0]}</span>
+                          <span className="stat-value" style={{ color: getSlabColor(slab.index) }}>
+                            {slab.label.split(' (')[0]}
+                          </span>
                         </div>
                         <div className="stat-card">
                           <span className="stat-caption">Consumed this month</span>
@@ -417,7 +489,7 @@ function App() {
                 <span style={{ fontSize: '20px', flexShrink: 0 }}>☕</span>
                 <div>
                   <div className="donation-card-title">Enjoying Boner Mohis?</div>
-                  <div className="donation-card-subtitle">Support Boner Mohis & open-source work</div>
+                  <div className="donation-card-subtitle">Support Boner Mohis development</div>
                 </div>
               </div>
               <a
@@ -467,7 +539,12 @@ function App() {
                       </svg>
                     </button>
                     <div className="account-meta">
-                      <span className="nickname-title">{activeAccount.nickname}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="nickname-title">{activeAccount.nickname}</span>
+                        {activeStats.low && (
+                          <span className="asc-low-badge">Low balance</span>
+                        )}
+                      </div>
                       <span className="account-no-label">A/C &middot; {activeAccount.accountNo} &middot; {activeAccount.distributor.toUpperCase()}</span>
                     </div>
                   </div>
@@ -550,7 +627,7 @@ function App() {
                             <span className="info-caption">
                               Forecast bill <span className="hover-info-badge">i</span>
                             </span>
-                            <span className="info-value">{m.currency}{fmt2(m.forecastBill)}</span>
+                            <span className="info-value" style={{ color: 'var(--accent)' }}>{m.currency}{fmt2(m.forecastBill)}</span>
                             <div className="tier-tooltip">
                               <div className="tier-tooltip-title">Tiered billing breakdown</div>
                               <table className="tier-table">
@@ -583,7 +660,7 @@ function App() {
                             <span className="info-caption">
                               Forecast consumption <span className="hover-info-badge">i</span>
                             </span>
-                            <span className="info-value">
+                            <span className="info-value" style={{ color: 'var(--accent)' }}>
                               {m.forecastKwh.toFixed(0)} <span className="stat-unit">kWh</span>
                             </span>
                             <div className="tier-tooltip">
@@ -632,9 +709,24 @@ function App() {
                   <div className="detail-row-one-right">
                     {activeStats.slab && (
                       <div className="slab-visualizer-container glass-item" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                        <div className="slab-header">
-                          <span className="slab-title">Current billing tier</span>
-                          <span className="slab-value-label">{activeStats.slab.label}</span>
+                        <div className="slab-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="slab-title" style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                            Current billing tier
+                          </span>
+                          <span
+                            className="slab-value-label"
+                            style={{
+                              backgroundColor: getSlabBg(activeStats.slab.index),
+                              color: getSlabColor(activeStats.slab.index),
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              fontFamily: 'var(--font-body)'
+                            }}
+                          >
+                            {activeStats.slab.label}
+                          </span>
                         </div>
                         <div className="slab-bar-wrapper">
                           <div className="progress-bar-container">
@@ -666,7 +758,12 @@ function App() {
                           <span className="slab-foot-text">
                             {activeAccount.slabUsage.toFixed(2)} kWh consumed in tier
                           </span>
-                          <span className="slab-foot-pct">{activeStats.slab.percentage}% used</span>
+                          <span className="slab-foot-pct" style={{ color: getSlabColor(activeStats.slab.index), fontWeight: 500 }}>
+                            {activeStats.slab.percentage}% used
+                          </span>
+                        </div>
+                        <div style={{ marginTop: '16px' }}>
+                          <ChargeBar monthlyKwh={activeAccount.monthlyKwh} />
                         </div>
                       </div>
                     )}
@@ -738,7 +835,7 @@ function App() {
                     <span style={{ fontSize: '20px', flexShrink: 0 }}>☕</span>
                     <div>
                       <div className="donation-card-title">Enjoying Boner Mohis?</div>
-                      <div className="donation-card-subtitle">Support Boner Mohis & open-source work</div>
+                      <div className="donation-card-subtitle">Support Boner Mohis development</div>
                     </div>
                   </div>
                   <a

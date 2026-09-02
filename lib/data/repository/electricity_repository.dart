@@ -63,7 +63,7 @@ class ElectricityRepository {
         final sdf = DateFormat('yyyy-MM-dd');
         final dateTo = sdf.format(DateTime.now());
         final dateFrom = sdf.format(
-          DateTime.now().subtract(const Duration(days: 15)),
+          DateTime.now().subtract(const Duration(days: 35)),
         );
 
         final consumptionUri = Uri.parse(

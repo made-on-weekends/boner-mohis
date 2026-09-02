@@ -1288,7 +1288,7 @@ svg.spinning {
 
 .history-date {
   font-family: var(--font-body);
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .history-metrics {
@@ -1298,12 +1298,13 @@ svg.spinning {
 
 .history-kwh {
   font-family: var(--font-mono);
-  color: var(--text-primary);
+  color: var(--state-ok-text);
 }
 
 .history-cost {
   font-family: var(--font-mono);
-  color: var(--text-secondary);
+  color: var(--accent-text);
+  font-weight: 500;
 }
 
 /* Modals & Dialog overlays */

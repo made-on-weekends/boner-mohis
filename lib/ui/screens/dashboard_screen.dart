@@ -101,14 +101,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           }
 
           final sorted = [...accounts]..sort((a, b) {
-              final aLow = a.balance <= 0;
-              final bLow = b.balance <= 0;
-              if (aLow && !bLow) return -1;
-              if (!aLow && bLow) return 1;
               final dA = CalculationsHelper.calculateDaysRemaining(
                   a.balance, a.yesterdayUsage);
               final dB = CalculationsHelper.calculateDaysRemaining(
                   b.balance, b.yesterdayUsage);
+              final aLow = a.balance <= 0 || (dA != double.infinity && dA <= 2.0);
+              final bLow = b.balance <= 0 || (dB != double.infinity && dB <= 2.0);
+              if (aLow && !bLow) return -1;
+              if (!aLow && bLow) return 1;
               if (dA == dB) return 0;
               if (dA.isNaN || dA == double.infinity) return 1;
               if (dB.isNaN || dB == double.infinity) return -1;

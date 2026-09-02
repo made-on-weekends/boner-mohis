@@ -117,8 +117,8 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
 
     final daysRemaining = CalculationsHelper.calculateDaysRemaining(
         account.balance, account.yesterdayUsage);
-    final isLowBalance =
-        daysRemaining != double.infinity && daysRemaining <= 2.0;
+    final isLowBalance = account.balance <= 0 ||
+        (daysRemaining != double.infinity && daysRemaining <= 2.0);
     final slabDetails = CalculationsHelper.getSlabDetails(account.monthlyKwh,
         provider: account.distributor);
     final dist = CalculationsHelper.distributors[account.distributor] ??
@@ -135,9 +135,19 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
         DateTime.fromMillisecondsSinceEpoch(account.lastUpdated));
 
     // ── Computed card metrics (mirrors extension's computeCardMetrics) ────
-    final daysElapsed = history.isNotEmpty ? history.length : 1;
-    final dailyAvgKwh = account.monthlyKwh / daysElapsed;
     final now = DateTime.now();
+    final currentMonthPrefix = DateFormat('yyyy-MM').format(now);
+    final currentMonthRecords = history.where((h) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(h.dateEpoch);
+      return DateFormat('yyyy-MM').format(dt) == currentMonthPrefix;
+    }).toList();
+    final daysElapsed = max(
+      1,
+      currentMonthRecords.isNotEmpty
+          ? currentMonthRecords.length
+          : (now.day - 1),
+    );
+    final dailyAvgKwh = account.monthlyKwh / daysElapsed;
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final daysRemainingInMonth =
         max(daysInMonth - (now.day - 1), 0);
@@ -158,7 +168,49 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(account.nickname),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                account.nickname,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isLowBalance) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: FilamentColors.danger.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: FilamentColors.danger.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 12,
+                      color: FilamentColors.dangerText(isDark),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Low balance',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: FilamentColors.dangerText(isDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
         actions: [
           RotationTransition(
             turns: _syncRotation,
@@ -290,14 +342,6 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
                     ],
                   ),
                   const SizedBox(height: 8),
-
-                  // ChargeBar
-                  ChargeBar(
-                    monthlyKwh: account.monthlyKwh,
-                    loading: syncLoading,
-                  ),
-
-                  const SizedBox(height: 4),
                   Text(
                     'as of $dateStr · ${account.distributor == "desco" ? "synced" : "manual entry"}',
                     style: GoogleFonts.dmMono(fontSize: 11, color: textMuted),
@@ -536,7 +580,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen>
                               fontSize: 13, color: textMuted)),
                     )
                   else
-                    ...history.take(10).map((item) {
+                    ...history.reversed.take(10).map((item) {
                       final dt = DateTime.fromMillisecondsSinceEpoch(
                           item.dateEpoch);
                       final label = DateFormat('MMM d').format(dt);

@@ -8,6 +8,7 @@ import 'package:workmanager/workmanager.dart';
 import '../data/database/app_database.dart';
 import '../data/desco_http_client.dart';
 
+
 const _channelId = 'boner_mohis_low_balance';
 const _channelName = 'Low Balance Alerts';
 const _channelDesc =
@@ -17,23 +18,70 @@ const _taskName = 'com.bonermohis.balance_check';
 /// Notification threshold: alert when fewer than this many days of balance remain.
 const double kLowBalanceThresholdDays = 2.0;
 const int kTwentyFourHoursMs = 24 * 60 * 60 * 1000;
+const int kTwelveHoursMs = 12 * 60 * 60 * 1000;
 const int kSixHoursMs = 6 * 60 * 60 * 1000;
 const int kOneHourMs = 1 * 60 * 60 * 1000;
+
+/// Target local hour for daily API sync (1 = 1 AM user local time).
+const int kDailyApiSyncTargetHourLocal = 1;
+
+/// Calculates the most recent target hour DateTime (e.g. 1 AM local time).
+DateTime getMostRecentTargetTime(
+  DateTime now, {
+  int targetHour = kDailyApiSyncTargetHourLocal,
+}) {
+  final candidate = DateTime(now.year, now.month, now.day, targetHour, 0, 0);
+  if (now.isBefore(candidate)) {
+    return candidate.subtract(const Duration(days: 1));
+  }
+  return candidate;
+}
+
+/// Checks if daily API sync at 1 AM local time is due.
+bool isDailyApiSyncDue({
+  required DateTime now,
+  required int lastApiSyncSuccessEpoch,
+  int targetLocalHour = kDailyApiSyncTargetHourLocal,
+}) {
+  if (lastApiSyncSuccessEpoch == 0) return true;
+  final targetTime = getMostRecentTargetTime(now, targetHour: targetLocalHour);
+  return lastApiSyncSuccessEpoch < targetTime.millisecondsSinceEpoch;
+}
+
+/// Checks if API sync retry is due (retries every 1 hour after a failed API call).
+bool isApiRetryDue({
+  required DateTime now,
+  required int lastApiSyncAttemptEpoch,
+}) {
+  if (lastApiSyncAttemptEpoch == 0) return true;
+  final nowMs = now.millisecondsSinceEpoch;
+  return (nowMs - lastApiSyncAttemptEpoch) >= kOneHourMs;
+}
+
+/// Checks if low balance notification is due (every 12 hours).
+bool isLowBalanceNotificationDue({
+  required DateTime now,
+  required int lastLowNotifyEpoch,
+}) {
+  if (lastLowNotifyEpoch == 0) return true;
+  final nowMs = now.millisecondsSinceEpoch;
+  return (nowMs - lastLowNotifyEpoch) >= kTwelveHoursMs;
+}
 
 final _notifications = FlutterLocalNotificationsPlugin();
 bool _notificationsInitialized = false;
 
-/// Initialise the notifications plugin and schedule the hourly background check.
+/// Initialise the notifications plugin and schedule the background check.
 /// Wrapped in try/catch so a WorkManager registration failure never crashes startup.
 Future<void> setupNotifications() async {
   try {
-    await _ensureNotificationsInitialized();
+    await _ensureNotificationsInitialized(requestPermission: true);
 
     await Workmanager().initialize(
       dispatcherCallbackDispatcher,
     );
 
-    // Register 1-hourly task for API retries, daily updates, and low-balance checks
+    // Register periodic task for 1 AM daily API sync, hourly failure retries, and 12h low-balance checks
     await Workmanager().registerPeriodicTask(
       _taskName,
       _taskName,
@@ -41,31 +89,46 @@ Future<void> setupNotifications() async {
       constraints: Constraints(
         networkType: NetworkType.connected,
       ),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
   } catch (_) {
     // WorkManager not available (e.g. emulator/desktop) — skip silently.
   }
 }
 
-/// Ensures the notifications plugin is initialised (safe to call multiple times).
-Future<void> _ensureNotificationsInitialized() async {
+/// Ensures the notifications plugin is initialised (safe to call in UI or background isolate).
+Future<void> _ensureNotificationsInitialized({bool requestPermission = true}) async {
   if (_notificationsInitialized) return;
+
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
   const initSettings = InitializationSettings(android: androidInit);
-  await _notifications.initialize(initSettings);
+  try {
+    await _notifications.initialize(initSettings);
+  } catch (_) {}
 
   final android =
       _notifications.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
-  await android?.requestNotificationsPermission();
-  const channel = AndroidNotificationChannel(
-    _channelId,
-    _channelName,
-    description: _channelDesc,
-    importance: Importance.high,
-  );
-  await android?.createNotificationChannel(channel);
+
+  if (requestPermission) {
+    try {
+      await android?.requestNotificationsPermission();
+    } catch (_) {
+      // Background isolate has no Activity context for permission dialogs.
+    }
+  }
+
+  try {
+    const channel = AndroidNotificationChannel(
+      _channelId,
+      _channelName,
+      description: _channelDesc,
+      importance: Importance.high,
+      playSound: true,
+    );
+    await android?.createNotificationChannel(channel);
+  } catch (_) {}
+
   _notificationsInitialized = true;
 }
 
@@ -75,14 +138,14 @@ Future<void> sendSyncedBalanceNotification({
   required String nickname,
   required double balance,
 }) async {
-  await _ensureNotificationsInitialized();
+  await _ensureNotificationsInitialized(requestPermission: false);
 
   const androidDetails = AndroidNotificationDetails(
     _channelId,
     _channelName,
     channelDescription: _channelDesc,
-    importance: Importance.defaultImportance,
-    priority: Priority.defaultPriority,
+    importance: Importance.high,
+    priority: Priority.high,
     icon: '@mipmap/ic_launcher',
   );
 
@@ -96,38 +159,6 @@ Future<void> sendSyncedBalanceNotification({
   );
 }
 
-/// Fire a standard daily balance summary notification for a single account.
-Future<void> sendDailyBalanceNotification({
-  required int id,
-  required String nickname,
-  required double daysRemaining,
-  required double balance,
-}) async {
-  await _ensureNotificationsInitialized();
-
-  const androidDetails = AndroidNotificationDetails(
-    _channelId,
-    _channelName,
-    channelDescription: _channelDesc,
-    importance: Importance.defaultImportance,
-    priority: Priority.defaultPriority,
-    icon: '@mipmap/ic_launcher',
-  );
-
-  const details = NotificationDetails(android: androidDetails);
-
-  final daysText = daysRemaining.isInfinite || daysRemaining.isNaN
-      ? '--'
-      : '~${daysRemaining.toStringAsFixed(1)}';
-
-  await _notifications.show(
-    id + 10000,
-    '⚡ Daily Balance Update: $nickname',
-    '৳${balance.toStringAsFixed(2)} remaining ($daysText days left).',
-    details,
-  );
-}
-
 /// Fire an urgent low-balance push notification for a single account.
 Future<void> sendLowBalanceNotification({
   required int id,
@@ -135,7 +166,7 @@ Future<void> sendLowBalanceNotification({
   required double daysRemaining,
   required double balance,
 }) async {
-  await _ensureNotificationsInitialized();
+  await _ensureNotificationsInitialized(requestPermission: false);
 
   const androidDetails = AndroidNotificationDetails(
     _channelId,
@@ -160,7 +191,7 @@ Future<void> sendLowBalanceNotification({
   );
 }
 
-/// Check a single account's balance and fire a notification if it is low.
+/// Check a single account's balance and fire low-balance notification if due.
 /// Call this from the repository after any balance update (sync / top-up / simulate).
 Future<void> checkAndNotifyForAccount({
   required int id,
@@ -169,57 +200,60 @@ Future<void> checkAndNotifyForAccount({
   required double yesterdayUsage,
 }) async {
   final days = yesterdayUsage > 0 ? balance / yesterdayUsage : double.infinity;
-  if (balance <= 0 || (yesterdayUsage > 0 && days <= kLowBalanceThresholdDays)) {
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final db = await _openDb();
-    int lastApiSyncSuccess = 0;
-    int lastDaily = 0;
-    int lastLow = 0;
+  final now = DateTime.now();
+  final nowMs = now.millisecondsSinceEpoch;
+  final db = await _openDb();
+  int lastApiSyncSuccess = 0;
+  int lastApiSyncAttempt = 0;
+  int lastDaily = 0;
+  int lastLow = 0;
 
-    if (db != null) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS notification_tracker (
-          account_id INTEGER PRIMARY KEY,
-          last_api_sync_success_epoch INTEGER NOT NULL DEFAULT 0,
-          last_daily_notify_epoch INTEGER NOT NULL DEFAULT 0,
-          last_low_balance_notify_epoch INTEGER NOT NULL DEFAULT 0
-        )
-      ''');
-      final trackerRows = await db.query(
-        'notification_tracker',
-        where: 'account_id = ?',
-        whereArgs: [id],
-      );
-      if (trackerRows.isNotEmpty) {
-        lastApiSyncSuccess =
-            trackerRows.first['last_api_sync_success_epoch'] as int? ?? 0;
-        lastDaily =
-            trackerRows.first['last_daily_notify_epoch'] as int? ?? 0;
-        lastLow =
-            trackerRows.first['last_low_balance_notify_epoch'] as int? ?? 0;
-      }
+  if (db != null) {
+    final trackerRows = await db.query(
+      'notification_tracker',
+      where: 'account_id = ?',
+      whereArgs: [id],
+    );
+    if (trackerRows.isNotEmpty) {
+      lastApiSyncSuccess =
+          trackerRows.first['last_api_sync_success_epoch'] as int? ?? 0;
+      lastApiSyncAttempt =
+          trackerRows.first['last_api_sync_attempt_epoch'] as int? ?? 0;
+      lastDaily =
+          trackerRows.first['last_daily_notify_epoch'] as int? ?? 0;
+      lastLow =
+          trackerRows.first['last_low_balance_notify_epoch'] as int? ?? 0;
     }
+  }
 
-    if ((nowMs - lastLow) >= kSixHoursMs) {
+  bool trackerUpdated = false;
+
+  // Urgent low balance notification check (every 12 hours)
+  if (balance <= 0 || (yesterdayUsage > 0 && days <= kLowBalanceThresholdDays)) {
+    if (isLowBalanceNotificationDue(now: now, lastLowNotifyEpoch: lastLow)) {
       await sendLowBalanceNotification(
         id: id,
         nickname: nickname,
         daysRemaining: days,
         balance: balance,
       );
-      if (db != null) {
-        await db.insert(
-          'notification_tracker',
-          {
-            'account_id': id,
-            'last_api_sync_success_epoch': lastApiSyncSuccess,
-            'last_daily_notify_epoch': lastDaily,
-            'last_low_balance_notify_epoch': nowMs,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
+      lastLow = nowMs;
+      trackerUpdated = true;
     }
+  }
+
+  if (db != null && trackerUpdated) {
+    await db.insert(
+      'notification_tracker',
+      {
+        'account_id': id,
+        'last_api_sync_success_epoch': lastApiSyncSuccess,
+        'last_api_sync_attempt_epoch': lastApiSyncAttempt,
+        'last_daily_notify_epoch': lastDaily,
+        'last_low_balance_notify_epoch': lastLow,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 }
 
@@ -250,21 +284,12 @@ Future<void> _runBalanceCheck() async {
     final db = await _openDb();
     if (db == null) return;
 
-    // Create tracker table if not exists
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS notification_tracker (
-        account_id INTEGER PRIMARY KEY,
-        last_api_sync_success_epoch INTEGER NOT NULL DEFAULT 0,
-        last_daily_notify_epoch INTEGER NOT NULL DEFAULT 0,
-        last_low_balance_notify_epoch INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
-
-    // Re-initialise the plugin inside the background isolate.
-    await _ensureNotificationsInitialized();
+    // Re-initialise the plugin inside the background isolate without requesting Activity permission dialogs.
+    await _ensureNotificationsInitialized(requestPermission: false);
 
     final rows = await db.query('accounts');
-    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime.now();
+    final nowMs = now.millisecondsSinceEpoch;
 
     for (final row in rows) {
       final id = row['id'] as int;
@@ -283,24 +308,37 @@ Future<void> _runBalanceCheck() async {
         whereArgs: [id],
       );
       int lastApiSyncSuccess = 0;
+      int lastApiSyncAttempt = 0;
       int lastDaily = 0;
       int lastLow = 0;
       if (trackerRows.isNotEmpty) {
         lastApiSyncSuccess =
             trackerRows.first['last_api_sync_success_epoch'] as int? ?? 0;
+        lastApiSyncAttempt =
+            trackerRows.first['last_api_sync_attempt_epoch'] as int? ?? 0;
         lastDaily =
             trackerRows.first['last_daily_notify_epoch'] as int? ?? 0;
         lastLow =
             trackerRows.first['last_low_balance_notify_epoch'] as int? ?? 0;
       }
 
-      // Check if DESCO API sync is due (once every 24 hours).
-      // If last sync failed, (nowMs - lastApiSyncSuccess) remains >= 24h, retrying hourly.
+      // Check if daily 1 AM DESCO API sync is due AND retry interval (1 hour on failure) has passed
       bool freshSyncSucceeded = false;
+      final apiSyncDue = isDailyApiSyncDue(
+        now: now,
+        lastApiSyncSuccessEpoch: lastApiSyncSuccess,
+      );
+      final apiRetryDue = isApiRetryDue(
+        now: now,
+        lastApiSyncAttemptEpoch: lastApiSyncAttempt,
+      );
+
       if (distributor == 'desco' &&
           accountNo.isNotEmpty &&
           meterNo.isNotEmpty &&
-          (nowMs - lastApiSyncSuccess) >= kTwentyFourHoursMs) {
+          apiSyncDue &&
+          apiRetryDue) {
+        lastApiSyncAttempt = nowMs; // Record attempt timestamp
         try {
           http.Client client;
           try {
@@ -341,35 +379,26 @@ Future<void> _runBalanceCheck() async {
             client.close();
           }
         } catch (_) {
-          // If background network fetch fails, keep lastApiSyncSuccess unchanged
-          // so next hourly WorkManager task retries network check.
+          // If background network fetch fails, lastApiSyncAttempt recorded nowMs,
+          // so next hourly WorkManager run will retry in 1 hour until successful.
         }
       }
 
       final days = yesterdayUsage > 0 ? balance / yesterdayUsage : double.nan;
 
-      // 1. Daily notification check (once every 24 hours)
-      if ((nowMs - lastDaily) >= kTwentyFourHoursMs) {
-        if (freshSyncSucceeded) {
-          await sendSyncedBalanceNotification(
-            id: id,
-            nickname: nickname,
-            balance: balance,
-          );
-        } else {
-          await sendDailyBalanceNotification(
-            id: id,
-            nickname: nickname,
-            daysRemaining: days,
-            balance: balance,
-          );
-        }
+      // 1. Notify on fresh 1 AM daily sync success
+      if (freshSyncSucceeded) {
+        await sendSyncedBalanceNotification(
+          id: id,
+          nickname: nickname,
+          balance: balance,
+        );
         lastDaily = nowMs;
       }
 
-      // 2. Low balance notification check every 6 hours (using stored DB balance)
+      // 2. Low balance notification check every 12 hours
       if (balance <= 0 || (yesterdayUsage > 0 && days <= kLowBalanceThresholdDays)) {
-        if ((nowMs - lastLow) >= kSixHoursMs) {
+        if (isLowBalanceNotificationDue(now: now, lastLowNotifyEpoch: lastLow)) {
           await sendLowBalanceNotification(
             id: id,
             nickname: nickname,
@@ -386,6 +415,7 @@ Future<void> _runBalanceCheck() async {
         {
           'account_id': id,
           'last_api_sync_success_epoch': lastApiSyncSuccess,
+          'last_api_sync_attempt_epoch': lastApiSyncAttempt,
           'last_daily_notify_epoch': lastDaily,
           'last_low_balance_notify_epoch': lastLow,
         },
@@ -397,16 +427,41 @@ Future<void> _runBalanceCheck() async {
 
 Future<Database?> _openDb() async {
   try {
-    return await AppDatabase().database;
+    final db = await AppDatabase().database;
+    await _ensureTrackerTableSchema(db);
+    return db;
   } catch (_) {
     try {
       final dir = await getDatabasesPath();
-      return await openDatabase(p.join(dir, 'boner_mohis.db'));
+      final db = await openDatabase(p.join(dir, 'boner_mohis.db'));
+      await _ensureTrackerTableSchema(db);
+      return db;
     } catch (_) {
       return null;
     }
   }
 }
+
+Future<void> _ensureTrackerTableSchema(Database db) async {
+  await db.execute('''
+    CREATE TABLE IF NOT EXISTS notification_tracker (
+      account_id INTEGER PRIMARY KEY,
+      last_api_sync_success_epoch INTEGER NOT NULL DEFAULT 0,
+      last_api_sync_attempt_epoch INTEGER NOT NULL DEFAULT 0,
+      last_daily_notify_epoch INTEGER NOT NULL DEFAULT 0,
+      last_low_balance_notify_epoch INTEGER NOT NULL DEFAULT 0
+    )
+  ''');
+  try {
+    await db.execute(
+      'ALTER TABLE notification_tracker ADD COLUMN last_api_sync_attempt_epoch INTEGER NOT NULL DEFAULT 0',
+    );
+  } catch (_) {
+    // Column already exists
+  }
+}
+
+
 
 
 
