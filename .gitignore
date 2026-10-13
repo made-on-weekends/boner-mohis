@@ -1,0 +1,43 @@
+# Secrets & environment
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.env
+*.pem
+!assets/certs/digicert_global_g2.pem
+*.key
+key.properties
+**/*.keystore
+**/*.jks
+
+# Local AI agent state
+.claude/settings.local.json
+CLAUDE.local.md
+GEMINI.local.md
+.gemini/
+.cursor/
+.codegraph/
+.agents/
+
+# Flutter & Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Android build & local paths
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+android/**/.cxx/
+
+# Web Extension dependencies & build
+node_modules/
+/extension/
+*.log

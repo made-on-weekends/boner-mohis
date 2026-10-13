@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 950.0 900.0"
+   role="img"
+   aria-label="বনের মহিষ"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="bm_glyph_paper.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.81888889"
+     inkscape:cx="475.03392"
+     inkscape:cy="450"
+     inkscape:window-width="1920"
+     inkscape:window-height="945"
+     inkscape:window-x="0"
+     inkscape:window-y="872"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g4" />
+  <!-- A6 Standalone charge-bar glyph, soot-paper on transparent, dark surfaces. LOCKED E2 stepped-solid geometry. Segment w=230.0, gap=130.0, base band=200.0, heights=[430.0, 665.0, 900.0], glyph 950.0x900.0. Columns share one continuous base - this is what stops the battery reading (a battery's cells sit inside a casing, never on a shared floor) and the signal-bars reading (signal bars are always discrete). Segments ASCEND, which battery cells do not. Gap widened from 70 to 130 vs the Step 1 presentation so three segments still resolve at 16px - FLAGGED, not silent. Single-fill per element. The ember 'glow' is a COLOUR VALUE, never a filter, gradient or shadow. -->
+  <g
+     transform="translate(0.00,900.00) scale(1.00000,-1.00000)"
+     id="g4">
+    <path
+       d="M0 0 L950.0 0 L950.0 200.0 L0 200.0 Z"
+       fill="#F9F6F0"
+       id="path1" />
+    <path
+       d="M 0,199 H 230 V 429 H 0 Z"
+       fill="#f9f6f0"
+       id="path2" />
+    <path
+       d="M 360,199 H 590 V 664 H 360 Z"
+       fill="#f9f6f0"
+       id="path3" />
+    <path
+       d="M720.0 200.0 L950.0 200.0 L950.0 900.0 L720.0 900.0 Z"
+       fill="#E88540"
+       id="path4" />
+  </g>
+</svg>

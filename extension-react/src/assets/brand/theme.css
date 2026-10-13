@@ -1,0 +1,77 @@
+/* Boner Mohis — design tokens as CSS custom properties.
+   Generated from _ops/tokens/boner-mohis.json by _ops/scripts/gen-sidecars.mjs.
+   Source of truth: boner-mohis/DESIGN.md §3
+   Do not hand-edit; re-run the script instead. */
+
+/* Ramps — fixed colours, identical in both modes. The semantic tokens below draw
+   from these; do not use a ramp step directly where a role token exists. */
+:root {
+  --soot-50: #F9F6F0;
+  --soot-100: #F1EDE4;
+  --soot-200: #E2DCCF;
+  --soot-300: #C9C2B1;
+  --soot-400: #9E9787;
+  --soot-500: #756F61;
+  --soot-600: #535046;
+  --soot-700: #38352E;
+  --soot-800: #232019;
+  --soot-900: #181510;
+  --ember-300: #F5A96B;
+  --ember-400: #E88540;
+  --ember-500: #D96A14;
+  --ember-600: #B25409;
+  --ember-700: #8A4108;
+}
+
+:root {
+  --background: #F9F6F0;
+  --surface: #FFFFFF;
+  --surface-sunken: #F1EDE4;
+  --text: #181510;
+  --text-secondary: #535046;
+  --text-muted: #716B5D;
+  --border: #E2DCCF;
+  --border-strong: #7D7768;
+  --accent: #AE5105;
+  --accent-hover: #8A4108;
+  --focus-ring: #D86913;
+  --text-on-accent: #FFFFFF;
+  --success: #2C7B38;
+  --error: #C22A21;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #181510;
+    --surface: #232019;
+    --surface-sunken: #131210;
+    --text: #EFEBE2;
+    --text-secondary: #C9C2B1;
+    --text-muted: #9E9787;
+    --border: #38352E;
+    --border-strong: #9E9787;
+    --accent: #E88540;
+    --accent-hover: #F5A96B;
+    --focus-ring: #D96A14;
+    --text-on-accent: #181510;
+    --success: #6FBF7C;
+    --error: #F0736A;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #181510;
+  --surface: #232019;
+  --surface-sunken: #131210;
+  --text: #EFEBE2;
+  --text-secondary: #C9C2B1;
+  --text-muted: #9E9787;
+  --border: #38352E;
+  --border-strong: #9E9787;
+  --accent: #E88540;
+  --accent-hover: #F5A96B;
+  --focus-ring: #D96A14;
+  --text-on-accent: #181510;
+  --success: #6FBF7C;
+  --error: #F0736A;
+}
